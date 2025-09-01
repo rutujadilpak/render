@@ -31,8 +31,7 @@ import {
   Package,
   Footprints,
   Trash2
-} from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+} from "lucide-react";import { useToast } from "@/hooks/use-toast";
 import { Enquiry } from "@/types";
 import { useEnquiriesWithPolling, useCrmStats } from "@/services/enquiryApiService";
 
@@ -72,6 +71,7 @@ const getStageBadgeColor = (stage: string): string => {
   }
 };
 
+
 interface CRMModuleProps {
   activeAction?: string | null;
 }
@@ -98,7 +98,6 @@ export function CRMModule({ activeAction }: CRMModuleProps = {}) {
   const [searchTerm, setSearchTerm] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editData, setEditData] = useState<Partial<Enquiry>>({});
-  const [editFormErrors, setEditFormErrors] = useState<{[key: string]: string}>({});
   
   // Convert dialog state
   const [showConvertDialog, setShowConvertDialog] = useState(false);
@@ -149,10 +148,10 @@ export function CRMModule({ activeAction }: CRMModuleProps = {}) {
         } else {
           // Remove all spaces and hyphens for validation
           const cleanNumber = value.replace(/[\s-]/g, '');
-          // Check if exactly 10 digits (no +91 prefix for simplicity)
-          const phoneRegex = /^[0-9]{10}$/;
+          // Indian phone number: optional +91 followed by exactly 10 digits
+          const phoneRegex = /^(\+91)?[0-9]{10}$/;
           if (!phoneRegex.test(cleanNumber)) {
-            return "Please enter exactly 10 digits";
+            return "Please enter valid phone number (10 digits, +91 optional)";
           }
         }
         break;
@@ -218,35 +217,6 @@ export function CRMModule({ activeAction }: CRMModuleProps = {}) {
     return Object.keys(errors).length === 0;
   };
 
-  // Validate edit form
-  const validateEditForm = (enquiry: Enquiry) => {
-    const errors: {[key: string]: string} = {};
-    const data = { ...enquiry, ...editData };
-    
-    // Validate name
-    const nameError = validateField('name', data.customerName || '');
-    if (nameError) errors.customerName = nameError;
-    
-    // Validate phone
-    const phoneError = validateField('number', data.phone || '');
-    if (phoneError) errors.phone = phoneError;
-    
-    // Validate address
-    const addressError = validateField('location', data.address || '');
-    if (addressError) errors.address = addressError;
-    
-    // Validate message
-    const messageError = validateField('message', data.message || '');
-    if (messageError) errors.message = messageError;
-    
-    // Validate quantity
-    const quantityError = validateField('quantity', data.quantity?.toString() || '1');
-    if (quantityError) errors.quantity = quantityError;
-    
-    setEditFormErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
   const handleSubmit = async () => {
     if (!validateForm()) {
       // Get fresh validation errors after validateForm() runs
@@ -301,8 +271,8 @@ export function CRMModule({ activeAction }: CRMModuleProps = {}) {
       status: "new",
       contacted: false,
       currentStage: "enquiry",
+
     });
-    
     setFormData({ name: "", number: "", location: "", message: "", inquiryType: "", product: "", quantity: "1" });
     setFormErrors({});
     
@@ -319,51 +289,14 @@ export function CRMModule({ activeAction }: CRMModuleProps = {}) {
   const handleEdit = (enquiry: Enquiry) => {
     setEditingId(enquiry.id);
     setEditData(enquiry);
-    setEditFormErrors({});
   };
 
-  const handleSaveEdit = async (enquiry: Enquiry) => {
-    if (!validateEditForm(enquiry)) {
-      // Show validation errors for edit form
-      const errors = editFormErrors;
-      if (Object.keys(errors).length > 0) {
-        const fieldLabels: {[key: string]: string} = {
-          customerName: "Customer Name",
-          phone: "Phone Number",
-          address: "Address", 
-          message: "Message",
-          quantity: "Quantity"
-        };
-        
-        const errorCount = Object.keys(errors).length;
-        const errorList = Object.keys(errors).map(field => `• ${fieldLabels[field]}: ${errors[field]}`);
-        
-        toast({
-          title: `Please fix ${errorCount} error${errorCount > 1 ? 's' : ''} in edit form`,
-          description: (
-            <div className="space-y-1">
-              {errorList.map((error, index) => (
-                <div key={index} className="text-sm">{error}</div>
-              ))}
-            </div>
-          ),
-          className: "max-w-md bg-orange-50 border-orange-200 text-orange-800",
-        });
-      }
-      return;
-    }
-    
+  const handleSaveEdit = async (id: number) => {
     try {
-      const updatedEnquiry = await updateEnquiry(enquiry.id, editData);
+      const updatedEnquiry = await updateEnquiry(id, editData);
       if (updatedEnquiry) {
         setEditingId(null);
         setEditData({});
-        setEditFormErrors({});
-        toast({
-          title: "Enquiry Updated",
-          description: "Changes saved successfully!",
-          className: "bg-green-50 border-green-200 text-green-800",
-        });
       }
     } catch (error) {
       toast({
@@ -377,7 +310,6 @@ export function CRMModule({ activeAction }: CRMModuleProps = {}) {
   const handleCancelEdit = () => {
     setEditingId(null);
     setEditData({});
-    setEditFormErrors({});
   };
 
   const handleDelete = async (enquiry: Enquiry) => {
@@ -438,17 +370,32 @@ export function CRMModule({ activeAction }: CRMModuleProps = {}) {
     }
   };
 
-  const getProductIcon = (product: string) => {
-    const iconMap = {
-      "Bag": <Briefcase className="h-4 w-4" />,
-      "Shoe": <Footprints className="h-4 w-4" />,
-      "Wallet": <Wallet className="h-4 w-4" />,
-      "Belt": <AlarmSmoke className="h-4 w-4" />,
-      "All type furniture": <Sofa className="h-4 w-4" />
-    };
+  // const getProductIcon = (product: string) => {
+  //   return product === "Bag" ? <Briefcase className="h-4 w-4" /> : <ShoppingBag className="h-4 w-4" />;
+  // };
 
-    return iconMap[product] || <ShoppingBag className="h-4 w-4" />;
+  const getProductIcon = (product: string) => {
+  const iconMap = {
+    "Bag": <Briefcase className="h-4 w-4" />,
+    "Shoe": <Footprints className="h-4 w-4" />, // Using Package as closest match for shoes
+    "Wallet": <Wallet className="h-4 w-4" />,
+    "Belt": <AlarmSmoke className="h-4 w-4" />,
+    "All type furniture": <Sofa className="h-4 w-4" />
   };
+
+  return iconMap[product] || <ShoppingBag className="h-4 w-4" />; // Default fallback icon
+};
+const getProductIconAlternative = (product: string) => {
+  const iconMap = {
+    "Bag": <Briefcase className="h-4 w-4" />,
+    "Shoe": <Footprints className="h-4 w-4" />, // Keep ShoppingBag for shoes if preferred
+    "Wallet": <Wallet className="h-4 w-4" />,
+    "Belt": <AlarmSmoke className="h-4 w-4" />,
+    "All type furniture": <Sofa className="h-4 w-4" />
+  };
+
+  return iconMap[product] || <Package className="h-4 w-4" />; // Default fallback icon
+};
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -560,7 +507,6 @@ export function CRMModule({ activeAction }: CRMModuleProps = {}) {
                 <Label htmlFor="name" className="text-sm font-medium text-gray-700">Customer Name *</Label>
                 <Input
                   id="name"
-                  placeholder="Enter customer name"
                   value={formData.name}
                   onChange={(e) => {
                     setFormData({ ...formData, name: e.target.value });
@@ -582,12 +528,9 @@ export function CRMModule({ activeAction }: CRMModuleProps = {}) {
                 <Label htmlFor="number" className="text-sm font-medium text-gray-700">Phone Number *</Label>
                 <Input
                   id="number"
-                  placeholder="Enter 10-digit phone number"
                   value={formData.number}
                   onChange={(e) => {
-                    // Only allow digits and limit to 10
-                    const value = e.target.value.replace(/\D/g, '').slice(0, 10);
-                    setFormData({ ...formData, number: value });
+                    setFormData({ ...formData, number: e.target.value });
                     if (formErrors.number) {
                       setFormErrors({ ...formErrors, number: "" });
                     }
@@ -599,7 +542,6 @@ export function CRMModule({ activeAction }: CRMModuleProps = {}) {
                     }
                   }}
                   className={`mt-1 ${formErrors.number ? 'border-red-500 focus:border-red-500' : ''}`}
-                  maxLength={10}
                 />
                 {formErrors.number && <p className="text-red-500 text-xs mt-1">{formErrors.number}</p>}
               </div>
@@ -620,7 +562,7 @@ export function CRMModule({ activeAction }: CRMModuleProps = {}) {
                   }}
                 >
                   <SelectTrigger className={`mt-1 ${formErrors.inquiryType ? 'border-red-500 focus:border-red-500' : ''}`}>
-                    <SelectValue placeholder="Select inquiry source" />
+                    <SelectValue placeholder="Select source" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Instagram">Instagram</SelectItem>
@@ -647,7 +589,7 @@ export function CRMModule({ activeAction }: CRMModuleProps = {}) {
                   }}
                 >
                   <SelectTrigger className={`mt-1 ${formErrors.product ? 'border-red-500 focus:border-red-500' : ''}`}>
-                    <SelectValue placeholder="Select product type" />
+                    <SelectValue placeholder="Select product" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Bag">Bag</SelectItem>
@@ -702,13 +644,13 @@ export function CRMModule({ activeAction }: CRMModuleProps = {}) {
                     setFormErrors({ ...formErrors, location: "" });
                   }
                 }}
-                onBlur={(e) => {
-                  const error = validateField('location', e.target.value);
-                  if (error) {
-                    setFormErrors({ ...formErrors, location: error });
-                  }
-                }}
-                placeholder="Enter complete address with area, city, and pincode..."
+                                 onBlur={(e) => {
+                   const error = validateField('location', e.target.value);
+                   if (error) {
+                     setFormErrors({ ...formErrors, location: error });
+                   }
+                 }}
+                placeholder="Enter complete address..."
                 className={`mt-1 min-h-[80px] ${formErrors.location ? 'border-red-500 focus:border-red-500' : ''}`}
                 rows={3}
               />
@@ -726,13 +668,13 @@ export function CRMModule({ activeAction }: CRMModuleProps = {}) {
                     setFormErrors({ ...formErrors, message: "" });
                   }
                 }}
-                onBlur={(e) => {
-                  const error = validateField('message', e.target.value);
-                  if (error) {
-                    setFormErrors({ ...formErrors, message: error });
-                  }
-                }}
-                placeholder="Customer's inquiry details, requirements, and any specific requests..."
+                                 onBlur={(e) => {
+                   const error = validateField('message', e.target.value);
+                   if (error) {
+                     setFormErrors({ ...formErrors, message: error });
+                   }
+                 }}
+                placeholder="Customer's inquiry details..."
                 className={`mt-1 min-h-[100px] ${formErrors.message ? 'border-red-500 focus:border-red-500' : ''}`}
                 rows={4}
               />
@@ -745,7 +687,7 @@ export function CRMModule({ activeAction }: CRMModuleProps = {}) {
                 <h4 className="text-sm font-semibold text-gray-900 mb-3">Review Selection</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
                   <div className="flex items-center space-x-2">
-                    <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                    {getProductIcon(formData.product)}
                     <span className="font-medium text-gray-700">Product:</span>
                     <span className="text-gray-900">{formData.product}</span>
                   </div>
@@ -756,7 +698,7 @@ export function CRMModule({ activeAction }: CRMModuleProps = {}) {
                     </span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                    {getInquiryIcon(formData.inquiryType)}
                     <span className="font-medium text-gray-700">Source:</span>
                     <span className="text-gray-900">{formData.inquiryType}</span>
                   </div>
@@ -800,6 +742,10 @@ export function CRMModule({ activeAction }: CRMModuleProps = {}) {
               className="pl-10"
             />
           </div>
+          {/* <Button variant="outline" size="sm" className="w-full sm:w-auto">
+            <Filter className="h-4 w-4 mr-2" />
+            Filter
+          </Button> */}
         </div>
       </Card>
 
@@ -833,7 +779,7 @@ export function CRMModule({ activeAction }: CRMModuleProps = {}) {
                 <div className="flex items-center justify-between">
                   <h3 className="font-semibold text-gray-900 text-lg">Edit Enquiry</h3>
                   <div className="flex space-x-2">
-                    <Button size="sm" onClick={() => handleSaveEdit(enquiry)} className="bg-green-600 hover:bg-green-700 text-white">
+                    <Button size="sm" onClick={() => handleSaveEdit(enquiry.id)} className="bg-green-600 hover:bg-green-700 text-white">
                       <Save className="h-4 w-4 mr-1" />
                       Save
                     </Button>
@@ -846,55 +792,26 @@ export function CRMModule({ activeAction }: CRMModuleProps = {}) {
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-sm font-medium text-gray-700">Name *</Label>
-                    <Input
-                      placeholder="Enter customer name"
-                      value={editData.customerName || enquiry.customerName}
-                      onChange={(e) => {
-                        setEditData({ ...editData, customerName: e.target.value });
-                        if (editFormErrors.customerName) {
-                          setEditFormErrors({ ...editFormErrors, customerName: "" });
-                        }
-                      }}
-                      onBlur={(e) => {
-                        const error = validateField('name', e.target.value);
-                        if (error) {
-                          setEditFormErrors({ ...editFormErrors, customerName: error });
-                        }
-                      }}
-                      className={`mt-1 ${editFormErrors.customerName ? 'border-red-500 focus:border-red-500' : ''}`}
-                    />
-                    {editFormErrors.customerName && <p className="text-red-500 text-xs mt-1">{editFormErrors.customerName}</p>}
+                    <Label className="text-sm font-medium text-gray-700">Name</Label>
+                                         <Input
+                       value={editData.customerName || enquiry.customerName}
+                       onChange={(e) => setEditData({ ...editData, customerName: e.target.value })}
+                       className="mt-1"
+                     />
                   </div>
                   <div>
-                    <Label className="text-sm font-medium text-gray-700">Phone *</Label>
-                    <Input
-                      placeholder="Enter 10-digit phone number"
-                      value={editData.phone || enquiry.phone}
-                      onChange={(e) => {
-                        // Only allow digits and limit to 10
-                        const value = e.target.value.replace(/\D/g, '').slice(0, 10);
-                        setEditData({ ...editData, phone: value });
-                        if (editFormErrors.phone) {
-                          setEditFormErrors({ ...editFormErrors, phone: "" });
-                        }
-                      }}
-                      onBlur={(e) => {
-                        const error = validateField('number', e.target.value);
-                        if (error) {
-                          setEditFormErrors({ ...editFormErrors, phone: error });
-                        }
-                      }}
-                      className={`mt-1 ${editFormErrors.phone ? 'border-red-500 focus:border-red-500' : ''}`}
-                      maxLength={10}
-                    />
-                    {editFormErrors.phone && <p className="text-red-500 text-xs mt-1">{editFormErrors.phone}</p>}
+                    <Label className="text-sm font-medium text-gray-700">Phone</Label>
+                                         <Input
+                       value={editData.phone || enquiry.phone}
+                       onChange={(e) => setEditData({ ...editData, phone: e.target.value })}
+                       className="mt-1"
+                     />
                   </div>
                   <div>
                     <Label className="text-sm font-medium text-gray-700">Product</Label>
                     <Select value={editData.product || enquiry.product} onValueChange={(value) => setEditData({ ...editData, product: value as "Bag" | "Shoe" | "Wallet" | "Belt" | "All type furniture" })}>
                       <SelectTrigger className="mt-1">
-                        <SelectValue placeholder="Select product type" />
+                        <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Bag">Bag</SelectItem>
@@ -906,34 +823,20 @@ export function CRMModule({ activeAction }: CRMModuleProps = {}) {
                     </Select>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium text-gray-700">Quantity *</Label>
+                    <Label className="text-sm font-medium text-gray-700">Quantity</Label>
                     <Input
-                      type="text"
-                      placeholder="Enter quantity"
-                      value={editData.quantity?.toString() || enquiry.quantity.toString()}
-                      onChange={(e) => {
-                        // Only allow numbers
-                        const value = e.target.value.replace(/[^0-9]/g, '');
-                        setEditData({ ...editData, quantity: parseInt(value) || 1 });
-                        if (editFormErrors.quantity) {
-                          setEditFormErrors({ ...editFormErrors, quantity: "" });
-                        }
-                      }}
-                      onBlur={(e) => {
-                        const error = validateField('quantity', e.target.value);
-                        if (error) {
-                          setEditFormErrors({ ...editFormErrors, quantity: error });
-                        }
-                      }}
-                      className={`mt-1 ${editFormErrors.quantity ? 'border-red-500 focus:border-red-500' : ''}`}
+                      type="number"
+                      min="1"
+                      value={editData.quantity || enquiry.quantity}
+                      onChange={(e) => setEditData({ ...editData, quantity: parseInt(e.target.value) || 1 })}
+                      className="mt-1"
                     />
-                    {editFormErrors.quantity && <p className="text-red-500 text-xs mt-1">{editFormErrors.quantity}</p>}
                   </div>
                   <div>
                     <Label className="text-sm font-medium text-gray-700">Status</Label>
                     <Select value={editData.status || enquiry.status} onValueChange={(value) => setEditData({ ...editData, status: value as Enquiry['status'] })}>
                       <SelectTrigger className="mt-1">
-                        <SelectValue placeholder="Select status" />
+                        <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="new">New</SelectItem>
@@ -950,7 +853,7 @@ export function CRMModule({ activeAction }: CRMModuleProps = {}) {
                       onValueChange={(value) => setEditData({ ...editData, contacted: value === 'true' })}
                     >
                       <SelectTrigger className="mt-1">
-                        <SelectValue placeholder="Select contact status" />
+                        <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="false">Not Contacted</SelectItem>
@@ -961,67 +864,41 @@ export function CRMModule({ activeAction }: CRMModuleProps = {}) {
                 </div>
                 
                 <div>
-                  <Label className="text-sm font-medium text-gray-700">Address *</Label>
-                  <Textarea
-                    placeholder="Enter complete address with area, city, and pincode..."
-                    value={editData.address || enquiry.address}
-                    onChange={(e) => {
-                      setEditData({ ...editData, address: e.target.value });
-                      if (editFormErrors.address) {
-                        setEditFormErrors({ ...editFormErrors, address: "" });
-                      }
-                    }}
-                    onBlur={(e) => {
-                      const error = validateField('location', e.target.value);
-                      if (error) {
-                        setEditFormErrors({ ...editFormErrors, address: error });
-                      }
-                    }}
-                    className={`mt-1 ${editFormErrors.address ? 'border-red-500 focus:border-red-500' : ''}`}
-                    rows={2}
-                  />
-                  {editFormErrors.address && <p className="text-red-500 text-xs mt-1">{editFormErrors.address}</p>}
+                  <Label className="text-sm font-medium text-gray-700">Address</Label>
+                                     <Textarea
+                     value={editData.address || enquiry.address}
+                     onChange={(e) => setEditData({ ...editData, address: e.target.value })}
+                     className="mt-1"
+                     rows={2}
+                   />
                 </div>
                 
                 <div>
-                  <Label className="text-sm font-medium text-gray-700">Message *</Label>
+                  <Label className="text-sm font-medium text-gray-700">Message</Label>
                   <Textarea
-                    placeholder="Customer's inquiry details, requirements, and any specific requests..."
                     value={editData.message || enquiry.message}
-                    onChange={(e) => {
-                      setEditData({ ...editData, message: e.target.value });
-                      if (editFormErrors.message) {
-                        setEditFormErrors({ ...editFormErrors, message: "" });
-                      }
-                    }}
-                    onBlur={(e) => {
-                      const error = validateField('message', e.target.value);
-                      if (error) {
-                        setEditFormErrors({ ...editFormErrors, message: error });
-                      }
-                    }}
-                    className={`mt-1 ${editFormErrors.message ? 'border-red-500 focus:border-red-500' : ''}`}
+                    onChange={(e) => setEditData({ ...editData, message: e.target.value })}
+                    className="mt-1"
                     rows={3}
                   />
-                  {editFormErrors.message && <p className="text-red-500 text-xs mt-1">{editFormErrors.message}</p>}
                 </div>
               </div>
             ) : (
               // View Mode
               <div className="flex flex-col lg:flex-row lg:items-start justify-between space-y-4 lg:space-y-0">
                 <div className="flex-1">
-                  <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 mb-3">
-                    <h3 className="font-semibold text-gray-900 text-lg">{enquiry.customerName}</h3>
+                                     <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 mb-3">
+                     <h3 className="font-semibold text-gray-900 text-lg">{enquiry.customerName}</h3>
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge className={`${getStatusColor(enquiry.status)} text-xs px-2 py-1 rounded-full font-medium`}>
                         {enquiry.status}
                       </Badge>
                       <div className="flex items-center space-x-1 text-gray-500">
-                        <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                        {getInquiryIcon(enquiry.inquiryType)}
                         <span className="text-sm">{enquiry.inquiryType}</span>
                       </div>
                       <div className="flex items-center space-x-1 text-gray-500">
-                        <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                        {getProductIcon(enquiry.product)}
                         <span className="text-sm">{enquiry.product}</span>
                       </div>
                       <div className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
@@ -1029,11 +906,11 @@ export function CRMModule({ activeAction }: CRMModuleProps = {}) {
                       </div>
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-sm text-gray-600 mb-3">
-                    <div className="flex items-center">📞 {enquiry.phone}</div>
-                    <div className="flex items-center">📍 {enquiry.address}</div>
-                    <div className="flex items-center">📅 {new Date(enquiry.date).toLocaleDateString()}</div>
-                  </div>
+                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-sm text-gray-600 mb-3">
+                     <div className="flex items-center">📞 {enquiry.phone}</div>
+                     <div className="flex items-center">📍 {enquiry.address}</div>
+                                           <div className="flex items-center">📅 {new Date(enquiry.date).toLocaleDateString()}</div>
+                   </div>
                   <p className="text-gray-700 text-sm sm:text-base mb-3">{enquiry.message}</p>
                   {/* Contact Status Display */}
                   <div className="mt-3">
@@ -1124,7 +1001,7 @@ export function CRMModule({ activeAction }: CRMModuleProps = {}) {
                 
                 <div className="space-y-2">
                   <Label htmlFor="quotedAmount" className="text-sm font-medium text-gray-700">
-                    Quoted Amount (₹)
+                    Approx. Amount (₹)
                   </Label>
                   <Input
                     id="quotedAmount"
