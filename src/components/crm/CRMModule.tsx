@@ -7,8 +7,30 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Plus, Search, Filter, Instagram, Facebook, MessageCircle, Briefcase, ShoppingBag, Edit, Save, X, Phone, PhoneCall, CheckCircle, ArrowRight, Loader2, Trash2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { 
+  Plus, 
+  Search, 
+  Filter, 
+  Instagram, 
+  Facebook, 
+  MessageCircle, 
+  Briefcase, 
+  ShoppingBag, 
+  Edit, 
+  Save, 
+  X, 
+  Phone, 
+  PhoneCall, 
+  CheckCircle, 
+  ArrowRight, 
+  Loader2,
+  // New product-specific icons
+  Wallet,
+  AlarmSmoke,
+  Sofa,
+  Package,
+  Footprints
+} from "lucide-react";import { useToast } from "@/hooks/use-toast";
 import { Enquiry } from "@/types";
 import { useEnquiriesWithPolling, useCrmStats } from "@/services/enquiryApiService";
 
@@ -347,9 +369,32 @@ export function CRMModule({ activeAction }: CRMModuleProps = {}) {
     }
   };
 
+  // const getProductIcon = (product: string) => {
+  //   return product === "Bag" ? <Briefcase className="h-4 w-4" /> : <ShoppingBag className="h-4 w-4" />;
+  // };
+
   const getProductIcon = (product: string) => {
-    return product === "Bag" ? <Briefcase className="h-4 w-4" /> : <ShoppingBag className="h-4 w-4" />;
+  const iconMap = {
+    "Bag": <Briefcase className="h-4 w-4" />,
+    "Shoe": <Footprints className="h-4 w-4" />, // Using Package as closest match for shoes
+    "Wallet": <Wallet className="h-4 w-4" />,
+    "Belt": <AlarmSmoke className="h-4 w-4" />,
+    "All type furniture": <Sofa className="h-4 w-4" />
   };
+
+  return iconMap[product] || <ShoppingBag className="h-4 w-4" />; // Default fallback icon
+};
+const getProductIconAlternative = (product: string) => {
+  const iconMap = {
+    "Bag": <Briefcase className="h-4 w-4" />,
+    "Shoe": <Footprints className="h-4 w-4" />, // Keep ShoppingBag for shoes if preferred
+    "Wallet": <Wallet className="h-4 w-4" />,
+    "Belt": <AlarmSmoke className="h-4 w-4" />,
+    "All type furniture": <Sofa className="h-4 w-4" />
+  };
+
+  return iconMap[product] || <Package className="h-4 w-4" />; // Default fallback icon
+};
 
   const getStatusColor = (status: string) => {
     switch (status) {
