@@ -29,7 +29,8 @@ import {
   AlarmSmoke,
   Sofa,
   Package,
-  Footprints
+  Footprints,
+  Trash2
 } from "lucide-react";import { useToast } from "@/hooks/use-toast";
 import { Enquiry } from "@/types";
 import { useEnquiriesWithPolling, useCrmStats } from "@/services/enquiryApiService";
