@@ -5,7 +5,7 @@ import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import path from 'path';
-import { apiLimiter } from "./middleware/rateLimiter";
+//import { apiLimiter } from "./middleware/rateLimiter";
 
 
 // Import configurations and utilities
@@ -20,7 +20,7 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 const FRONTEND_PORT = process.env.FRONTEND_PORT || 8080;
 
-app.use("/api", apiLimiter);
+//app.use("/api", apiLimiter);
 
 // Security middleware
 app.use(helmet({

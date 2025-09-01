@@ -147,7 +147,7 @@ export function CRMModule({ activeAction }: CRMModuleProps = {}) {
           return "Phone number is required";
         } else {
           // Remove all spaces and hyphens for validation
-          const cleanNumber = value.replace(/[\s-]/g, '').slice(0, 10);
+          const cleanNumber = value.replace(/[\s-]/g, '');
           // Indian phone number: optional +91 followed by exactly 10 digits
           const phoneRegex = /^(\+91)?[0-9]{10}$/;
           if (!phoneRegex.test(cleanNumber)) {
@@ -613,7 +613,7 @@ const getProductIconAlternative = (product: string) => {
                   value={formData.quantity}
                   onChange={(e) => {
                     // Only allow numbers
-                    const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
+                    const value = e.target.value.replace(/[^0-9]/g, '');
                     setFormData({ ...formData, quantity: value });
                     if (formErrors.quantity) {
                       setFormErrors({ ...formErrors, quantity: "" });
@@ -921,7 +921,7 @@ const getProductIconAlternative = (product: string) => {
                   {enquiry.status === "converted" && enquiry.quotedAmount && (
                     <div className="mt-2 flex items-center space-x-1 text-green-600">
                       <span className="text-sm font-medium">₹{enquiry.quotedAmount}</span>
-                      <span className="text-xs text-gray-500">(Quoted)</span>
+                      <span className="text-xs text-gray-500">(Approx)</span>
                     </div>
                   )}
                 </div>
@@ -1001,7 +1001,7 @@ const getProductIconAlternative = (product: string) => {
                 
                 <div className="space-y-2">
                   <Label htmlFor="quotedAmount" className="text-sm font-medium text-gray-700">
-                    Approx. Amount (₹)
+                    Approx Amount (₹)
                   </Label>
                   <Input
                     id="quotedAmount"
