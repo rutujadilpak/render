@@ -160,24 +160,28 @@ export const createTables = async (): Promise<void> => {
         INDEX idx_customer_name (customer_name)
       )`,
       
-      // Pickup stage details
+      // Pickup stage details - Enhanced for proper pickup workflow
       `CREATE TABLE IF NOT EXISTS pickup_details (
         id INT PRIMARY KEY AUTO_INCREMENT,
         enquiry_id INT NOT NULL,
-        status ENUM('scheduled', 'assigned', 'collected', 'received') DEFAULT 'scheduled',
+        status ENUM('scheduled', 'assigned', 'collected', 'received') NOT NULL DEFAULT 'scheduled',
         scheduled_time DATETIME NULL,
-        assigned_to VARCHAR(255) NULL,
+        assigned_to VARCHAR(100) NULL,
         collection_notes TEXT NULL,
         collected_at DATETIME NULL,
         pin VARCHAR(10) NULL,
+        collection_photo_id INT NULL,
+        received_photo_id INT NULL,
+        received_notes TEXT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         FOREIGN KEY (enquiry_id) REFERENCES enquiries(id) ON DELETE CASCADE,
         INDEX idx_enquiry_id (enquiry_id),
-        INDEX idx_status (status)
+        INDEX idx_status (status),
+        INDEX idx_assigned_to (assigned_to)
       )`,
       
-      // Service stage details
+      // Service stage details - Enhanced for proper service workflow
       `CREATE TABLE IF NOT EXISTS service_details (
         id INT PRIMARY KEY AUTO_INCREMENT,
         enquiry_id INT NOT NULL,
@@ -185,6 +189,8 @@ export const createTables = async (): Promise<void> => {
         actual_cost DECIMAL(10,2) NULL,
         work_notes TEXT NULL,
         completed_at DATETIME NULL,
+        received_photo_id INT NULL,
+        received_notes TEXT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         FOREIGN KEY (enquiry_id) REFERENCES enquiries(id) ON DELETE CASCADE,
@@ -209,12 +215,12 @@ export const createTables = async (): Promise<void> => {
         INDEX idx_status (status)
       )`,
       
-      // Photos storage
+      // Photos storage - Enhanced with proper constraints and types
       `CREATE TABLE IF NOT EXISTS photos (
         id INT PRIMARY KEY AUTO_INCREMENT,
         enquiry_id INT NOT NULL,
-        stage VARCHAR(50) NOT NULL,
-        photo_type VARCHAR(50) NOT NULL,
+        stage ENUM('pickup', 'service', 'delivery', 'billing') NOT NULL,
+        photo_type ENUM('before_photo', 'after_photo') NOT NULL,
         photo_data LONGTEXT NOT NULL,
         notes TEXT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

@@ -12,6 +12,7 @@ import path from 'path';
 import { initializeDatabase, createTables } from './config/database';
 import { logApi, logDatabase } from './utils/logger';
 import enquiriesRouter from './routes/enquiries';
+import pickupRouter from './routes/pickup';
 
 // Load environment variables
 dotenv.config();
@@ -52,7 +53,7 @@ app.use(cors({
 // Rate limiting
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'), // limit each IP to 100 requests per windowMs
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100000000'), // limit each IP to 100 requests per windowMs
   message: {
     success: false,
     error: 'Too many requests',
@@ -116,6 +117,7 @@ app.get('/api/health', (req, res) => {
 
 // API routes
 app.use('/api/enquiries', enquiriesRouter);
+app.use('/api/pickup', pickupRouter);
 
 // Serve static files from the React app build directory
 if (process.env.NODE_ENV === 'production') {

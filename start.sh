@@ -7,7 +7,7 @@ export PORT=${PORT:-3001}
 export DB_HOST=${DB_HOST:-127.0.0.1}
 export DB_PORT=${DB_PORT:-3306}
 export DB_USER=${DB_USER:-root}
-export DB_PASSWORD=${DB_PASSWORD:-}
+export DB_PASSWORD=${DB_PASSWORD:-zonixtech@111}
 export DB_NAME=${DB_NAME:-cobbler_crm}
 export X_TOKEN_SECRET=${X_TOKEN_SECRET:-cobbler_super_secret_token_2024}
 
@@ -68,15 +68,21 @@ done
 echo "🗄️ Setting up database and users..."
 mysql -e "CREATE DATABASE IF NOT EXISTS $DB_NAME;" || true
 mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '$DB_PASSWORD';" || true
-mysql -e "CREATE USER IF NOT EXISTS '$DB_USER'@'%' IDENTIFIED WITH mysql_native_password BY '$DB_PASSWORD';" || true
-mysql -e "GRANT ALL PRIVILEGES ON $DB_NAME.* TO '$DB_USER'@'%';" || true
-mysql -e "GRANT ALL PRIVILEGES ON $DB_NAME.* TO 'root'@'localhost';" || true
-mysql -e "FLUSH PRIVILEGES;" || true
+
+# Now use the password for subsequent commands
+mysql -u root -p$DB_PASSWORD -e "CREATE USER IF NOT EXISTS '$DB_USER'@'localhost' IDENTIFIED WITH mysql_native_password BY '$DB_PASSWORD';" || true
+mysql -u root -p$DB_PASSWORD -e "CREATE USER IF NOT EXISTS '$DB_USER'@'127.0.0.1' IDENTIFIED WITH mysql_native_password BY '$DB_PASSWORD';" || true
+mysql -u root -p$DB_PASSWORD -e "CREATE USER IF NOT EXISTS '$DB_USER'@'%' IDENTIFIED WITH mysql_native_password BY '$DB_PASSWORD';" || true
+mysql -u root -p$DB_PASSWORD -e "GRANT ALL PRIVILEGES ON $DB_NAME.* TO '$DB_USER'@'localhost';" || true
+mysql -u root -p$DB_PASSWORD -e "GRANT ALL PRIVILEGES ON $DB_NAME.* TO '$DB_USER'@'127.0.0.1';" || true
+mysql -u root -p$DB_PASSWORD -e "GRANT ALL PRIVILEGES ON $DB_NAME.* TO '$DB_USER'@'%';" || true
+mysql -u root -p$DB_PASSWORD -e "GRANT ALL PRIVILEGES ON $DB_NAME.* TO 'root'@'localhost';" || true
+mysql -u root -p$DB_PASSWORD -e "FLUSH PRIVILEGES;" || true
 echo "✅ Database setup complete!"
 
 # Test database connection
 echo "🔍 Testing database connection..."
-mysql -h $DB_HOST -P $DB_PORT -u $DB_USER -p$DB_PASSWORD -e "SELECT 1;" $DB_NAME && echo "✅ Database connection successful!" || echo "❌ Database connection failed!"
+mysql -h $DB_HOST -P $DB_PORT -u $DB_USER -p$DB_PASSWORD -e "SELECT 1;" $DB_NAME 2>/dev/null && echo "✅ Database connection successful!" || echo "❌ Database connection failed!"
 
 # Start the Node.js application
 echo "🚀 Starting Cobbler CRM application..."

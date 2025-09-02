@@ -381,6 +381,9 @@ export interface DatabasePickupDetails {
   collection_notes?: string;
   collected_at?: string;
   pin?: string;
+  collection_photo_id?: number;
+  received_photo_id?: number;
+  received_notes?: string;
   created_at: string;
   updated_at: string;
 }
