@@ -49,9 +49,78 @@ export interface ServiceTypeStatus {
   workNotes?: string;
   
   // Backend-ready fields
-  id?: string; // For backend reference
+  id?: number; // For backend reference
   createdAt?: string;
   updatedAt?: string;
+}
+
+// Service details for backend operations
+export interface ServiceDetails {
+  id?: number;
+  enquiryId: number;
+  customerName: string;
+  phone: string;
+  address: string;
+  product: string;
+  quantity: number;
+  quotedAmount?: number;
+  estimatedCost?: number;
+  actualCost?: number;
+  workNotes?: string;
+  completedAt?: string;
+  receivedPhotoId?: number;
+  receivedNotes?: string;
+  overallBeforePhotoId?: number;
+  overallAfterPhotoId?: number;
+  overallBeforeNotes?: string;
+  overallAfterNotes?: string;
+  serviceTypes: ServiceTypeStatus[];
+  overallPhotos?: {
+    beforePhoto?: string;
+    afterPhoto?: string;
+    beforeNotes?: string;
+    afterNotes?: string;
+  };
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// Service statistics
+export interface ServiceStats {
+  pendingCount: number;
+  inProgressCount: number;
+  doneCount: number;
+  totalServices: number;
+}
+
+// Service API request types
+export interface ServiceAssignmentRequest {
+  enquiryId: number;
+  serviceTypes: ServiceType[];
+}
+
+export interface ServiceStartRequest {
+  serviceTypeId: number;
+  beforePhoto: string;
+  notes?: string;
+}
+
+export interface ServiceCompleteRequest {
+  serviceTypeId: number;
+  afterPhoto: string;
+  notes?: string;
+}
+
+export interface FinalPhotoRequest {
+  enquiryId: number;
+  afterPhoto: string;
+  notes?: string;
+}
+
+export interface WorkflowCompleteRequest {
+  enquiryId: number;
+  actualCost: number;
+  workNotes?: string;
 }
 
 // Business information types

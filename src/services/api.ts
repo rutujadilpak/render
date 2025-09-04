@@ -1,11 +1,7 @@
 import { ApiResponse, PaginatedResponse } from "@/types";
 
 // API configuration
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (
-  typeof window !== 'undefined' && window.location.origin !== 'http://localhost:5173' 
-    ? `${window.location.origin}/api`
-    : 'http://localhost:3001/api'
-);
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 // HTTP methods
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';

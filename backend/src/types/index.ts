@@ -49,7 +49,7 @@ export interface ServiceTypeStatus {
   workNotes?: string;
   
   // Backend-ready fields
-  id?: string; // For backend reference
+  id?: number; // For backend reference
   createdAt?: string;
   updatedAt?: string;
 }
@@ -114,6 +114,37 @@ export interface ServiceStage {
   workHistory?: WorkHistoryEntry[];
   completedAt?: string;
   billingDetails?: BillingDetails; // Add billing details to service stage
+}
+
+// Service details for backend operations
+export interface ServiceDetails {
+  id?: number;
+  enquiryId: number;
+  customerName: string;
+  phone: string;
+  address: string;
+  product: string;
+  quantity: number;
+  quotedAmount?: number;
+  estimatedCost?: number;
+  actualCost?: number;
+  workNotes?: string;
+  completedAt?: string;
+  receivedPhotoId?: number;
+  receivedNotes?: string;
+  overallBeforePhotoId?: number;
+  overallAfterPhotoId?: number;
+  overallBeforeNotes?: string;
+  overallAfterNotes?: string;
+  serviceTypes: ServiceTypeStatus[];
+  overallPhotos?: {
+    beforePhoto?: string;
+    afterPhoto?: string;
+    beforeNotes?: string;
+    afterNotes?: string;
+  };
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 // Delivery stage details
@@ -245,8 +276,56 @@ export type WorkflowStage = "enquiry" | "pickup" | "service" | "billing" | "deli
 
 // Stage-specific statuses
 export type PickupStatus = "scheduled" | "assigned" | "collected" | "received";
-export type ServiceType = "Sole Replacement" | "Zipper Repair" | "Cleaning & Polish" | "Stitching" | "Leather Treatment" | "Hardware Repair";
-export type ServiceStatus = "pending" | "in-progress" | "done";
+export type ServiceType = 
+  | 'Sole Replacement' 
+  | 'Zipper Repair' 
+  | 'Cleaning & Polish' 
+  | 'Stitching' 
+  | 'Leather Treatment' 
+  | 'Hardware Repair';
+
+export type ServiceStatus = 'pending' | 'in-progress' | 'done';
+
+
+
+
+
+export interface ServiceStats {
+  pendingCount: number;
+  inProgressCount: number;
+  doneCount: number;
+  totalServices: number;
+}
+
+export interface ServiceAssignmentRequest {
+  enquiryId: number;
+  serviceTypes: ServiceType[];
+}
+
+export interface ServiceStartRequest {
+  serviceTypeId: number;
+  beforePhoto: string;
+  notes?: string;
+}
+
+export interface ServiceCompleteRequest {
+  serviceTypeId: number;
+  afterPhoto: string;
+  notes?: string;
+}
+
+export interface FinalPhotoRequest {
+  enquiryId: number;
+  afterPhoto: string;
+  notes?: string;
+}
+
+export interface WorkflowCompleteRequest {
+  enquiryId: number;
+  actualCost: number;
+  workNotes?: string;
+}
+
 export type DeliveryStatus = "ready" | "scheduled" | "out-for-delivery" | "delivered";
 export type DeliveryMethod = "customer-pickup" | "home-delivery";
 
@@ -395,6 +474,37 @@ export interface DatabaseServiceDetails {
   actual_cost?: number;
   work_notes?: string;
   completed_at?: string;
+  received_photo_id?: number;
+  received_notes?: string;
+  overall_before_photo_id?: number;
+  overall_after_photo_id?: number;
+  overall_before_notes?: string;
+  overall_after_notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Combined interface for the JOIN query result
+export interface DatabaseServiceEnquiryJoin {
+  enquiry_id: number;
+  customer_name: string;
+  phone: string;
+  address: string;
+  product: string;
+  quantity: number;
+  quoted_amount?: number;
+  current_stage: string;
+  service_detail_id?: number;
+  estimated_cost?: number;
+  actual_cost?: number;
+  work_notes?: string;
+  completed_at?: string;
+  received_photo_id?: number;
+  received_notes?: string;
+  overall_before_photo_id?: number;
+  overall_after_photo_id?: number;
+  overall_before_notes?: string;
+  overall_after_notes?: string;
   created_at: string;
   updated_at: string;
 }

@@ -6,36 +6,40 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Camera, ArrowLeft, CheckCircle, Clock } from "lucide-react";
-import { Enquiry, ServiceType, ServiceTypeStatus } from "@/types";
-import { enquiriesStorage, workflowHelpers, imageUploadHelper } from "@/utils/localStorage";
+import { ServiceDetails, ServiceType } from "@/types";
+import { imageUploadHelper } from "@/utils/localStorage";
+import { serviceApiService } from "@/services/serviceApiService";
 
 interface ServiceTypeDetailProps {
   enquiryId: number;
   serviceType: ServiceType;
   onBack: () => void;
+  onServiceUpdated?: () => void;
 }
 
-export function ServiceTypeDetail({ enquiryId, serviceType, onBack }: ServiceTypeDetailProps) {
-  const [enquiry, setEnquiry] = useState<Enquiry | null>(null);
-  const [serviceStatus, setServiceStatus] = useState<ServiceTypeStatus | null>(null);
+export function ServiceTypeDetail({ enquiryId, serviceType, onBack, onServiceUpdated }: ServiceTypeDetailProps) {
+  const [serviceDetails, setServiceDetails] = useState<ServiceDetails | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
 
   useEffect(() => {
-    const loadEnquiry = () => {
-      const allEnquiries = enquiriesStorage.getAll();
-      const foundEnquiry = allEnquiries.find(e => e.id === enquiryId);
-      if (foundEnquiry) {
-        setEnquiry(foundEnquiry);
-        const service = foundEnquiry.serviceDetails?.serviceTypes?.find(s => s.type === serviceType);
-        setServiceStatus(service || null);
+    const loadServiceDetails = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await serviceApiService.getEnquiryServiceDetails(enquiryId);
+        setServiceDetails(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load service details');
+      } finally {
+        setLoading(false);
       }
     };
     
-    loadEnquiry();
-    const interval = setInterval(loadEnquiry, 2000);
-    return () => clearInterval(interval);
-  }, [enquiryId, serviceType]);
+    loadServiceDetails();
+  }, [enquiryId]);
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -50,94 +54,113 @@ export function ServiceTypeDetail({ enquiryId, serviceType, onBack }: ServiceTyp
     }
   };
 
-  const startService = () => {
-    if (!enquiry || !selectedImage) return;
+  const startService = async () => {
+    if (!serviceDetails || !selectedImage) return;
 
-    const allEnquiries = enquiriesStorage.getAll();
-    const updatedEnquiries = allEnquiries.map((e) =>
-      e.id === enquiryId
-        ? {
-            ...e,
-            serviceDetails: {
-              ...e.serviceDetails!,
-              serviceTypes: e.serviceDetails!.serviceTypes.map(service =>
-                service.type === serviceType
-                  ? {
-                      ...service,
-                      status: "in-progress" as const,
-                      photos: {
-                        ...service.photos,
-                        beforePhoto: selectedImage,
-                        beforeNotes: notes,
-                      },
-                      startedAt: new Date().toISOString(),
-                    }
-                  : service
-              )
-            },
-          }
-        : e
-    );
-    
-    enquiriesStorage.save(updatedEnquiries);
-    setSelectedImage(null);
-    setNotes("");
-  };
+    try {
+      // Find the service type ID
+      const serviceTypeData = serviceDetails.serviceTypes?.find(s => s.type === serviceType);
+      if (!serviceTypeData?.id) {
+        alert('Service type not found');
+        return;
+      }
 
-  const completeService = () => {
-    if (!enquiry || !selectedImage) return;
-
-    const allEnquiries = enquiriesStorage.getAll();
-    const updatedEnquiries = allEnquiries.map((e) =>
-      e.id === enquiryId
-        ? {
-            ...e,
-            serviceDetails: {
-              ...e.serviceDetails!,
-              serviceTypes: e.serviceDetails!.serviceTypes.map(service =>
-                service.type === serviceType
-                  ? {
-                      ...service,
-                      status: "done" as const,
-                      photos: {
-                        ...service.photos,
-                        afterPhoto: selectedImage,
-                        afterNotes: notes,
-                      },
-                      completedAt: new Date().toISOString(),
-                    }
-                  : service
-              )
-            },
-          }
-        : e
-    );
-    
-    enquiriesStorage.save(updatedEnquiries);
-    setSelectedImage(null);
-    setNotes("");
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "pending":
-        return "bg-yellow-500 text-white";
-      case "in-progress":
-        return "bg-blue-500 text-white";
-      case "done":
-        return "bg-green-500 text-white";
-      default:
-        return "bg-gray-500 text-white";
+      // Call API to start service
+      await serviceApiService.startService(enquiryId, serviceTypeData.id, selectedImage, notes);
+      console.log('✅ Service started successfully');
+      
+      // Reset form
+      setSelectedImage(null);
+      setNotes("");
+      
+      // Refresh data to show updated status
+      const updatedDetails = await serviceApiService.getEnquiryServiceDetails(enquiryId);
+      setServiceDetails(updatedDetails);
+      
+      // Notify parent component to refresh the main service list
+      if (onServiceUpdated) {
+        onServiceUpdated();
+      }
+    } catch (error) {
+      console.error('Failed to start service:', error);
+      alert('Failed to start service. Please try again.');
     }
   };
 
-  if (!enquiry || !serviceStatus) {
+  const completeService = async () => {
+    if (!serviceDetails || !selectedImage) return;
+
+    try {
+      // Find the service type ID
+      const serviceTypeData = serviceDetails.serviceTypes?.find(s => s.type === serviceType);
+      if (!serviceTypeData?.id) {
+        alert('Service type not found');
+        return;
+      }
+
+      // Call API to complete service
+      await serviceApiService.completeService(enquiryId, serviceTypeData.id, selectedImage, notes);
+      console.log('✅ Service completed successfully');
+      
+      // Reset form
+      setSelectedImage(null);
+      setNotes("");
+      
+      // Refresh data to show updated status
+      const updatedDetails = await serviceApiService.getEnquiryServiceDetails(enquiryId);
+      setServiceDetails(updatedDetails);
+      
+      // Notify parent component to refresh the main service list
+      if (onServiceUpdated) {
+        onServiceUpdated();
+      }
+    } catch (error) {
+      console.error('Failed to complete service:', error);
+      alert('Failed to complete service. Please try again.');
+    }
+  };
+
+  if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p>Loading service details...</p>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading service details...</p>
+        </div>
       </div>
     );
   }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">{error}</p>
+          <Button onClick={onBack} variant="outline">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Service Queue
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!serviceDetails) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <p className="text-muted-foreground mb-4">Service details not found</p>
+          <Button onClick={onBack} variant="outline">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Service Queue
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Find the specific service type
+  const serviceTypeData = serviceDetails.serviceTypes?.find(s => s.type === serviceType);
 
   return (
     <div className="space-y-4 animate-fade-in p-2 sm:p-0">
@@ -153,28 +176,30 @@ export function ServiceTypeDetail({ enquiryId, serviceType, onBack }: ServiceTyp
               {serviceType}
             </h1>
             <p className="text-sm text-muted-foreground">
-              {enquiry.customerName} - {enquiry.product}
+              {serviceDetails.customerName} - {serviceDetails.product}
             </p>
           </div>
         </div>
-        <Badge className={`${getStatusColor(serviceStatus.status)} text-sm px-3 py-1`}>
-          {serviceStatus.status}
-        </Badge>
+        {serviceTypeData && (
+          <Badge className={`${getStatusColor(serviceTypeData.status)} text-sm px-3 py-1`}>
+            {serviceTypeData.status}
+          </Badge>
+        )}
       </div>
 
       {/* Compact Info */}
       <Card className="p-4 bg-gradient-card border-0 shadow-soft">
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <p><span className="font-medium">Status:</span> {serviceStatus.status}</p>
-            <p><span className="font-medium">Amount:</span> ₹{enquiry.quotedAmount || 0}</p>
+            <p><span className="font-medium">Status:</span> {serviceTypeData?.status || 'pending'}</p>
+            <p><span className="font-medium">Amount:</span> ₹{serviceDetails.quotedAmount || 0}</p>
           </div>
           <div>
-            {serviceStatus.startedAt && (
-              <p><span className="font-medium">Started:</span> {new Date(serviceStatus.startedAt).toLocaleDateString()}</p>
+            {serviceTypeData?.startedAt && (
+              <p><span className="font-medium">Started:</span> {new Date(serviceTypeData.startedAt).toLocaleDateString()}</p>
             )}
-            {serviceStatus.completedAt && (
-              <p><span className="font-medium">Completed:</span> {new Date(serviceStatus.completedAt).toLocaleDateString()}</p>
+            {serviceTypeData?.completedAt && (
+              <p><span className="font-medium">Completed:</span> {new Date(serviceTypeData.completedAt).toLocaleDateString()}</p>
             )}
           </div>
         </div>
@@ -185,15 +210,15 @@ export function ServiceTypeDetail({ enquiryId, serviceType, onBack }: ServiceTyp
         {/* Before Photo */}
         <Card className="p-4 bg-gradient-card border-0 shadow-soft">
           <h3 className="text-sm font-semibold text-foreground mb-2">Before Photo</h3>
-          {serviceStatus.photos.beforePhoto ? (
+          {serviceTypeData?.photos?.beforePhoto ? (
             <div className="space-y-2">
               <img
-                src={serviceStatus.photos.beforePhoto}
+                src={serviceTypeData.photos.beforePhoto}
                 alt="Before service"
                 className="w-full h-32 object-cover rounded-md border"
               />
-              {serviceStatus.photos.beforeNotes && (
-                <p className="text-xs text-muted-foreground">{serviceStatus.photos.beforeNotes}</p>
+              {serviceTypeData.photos.beforeNotes && (
+                <p className="text-xs text-muted-foreground">{serviceTypeData.photos.beforeNotes}</p>
               )}
             </div>
           ) : (
@@ -207,15 +232,15 @@ export function ServiceTypeDetail({ enquiryId, serviceType, onBack }: ServiceTyp
         {/* After Photo */}
         <Card className="p-4 bg-gradient-card border-0 shadow-soft">
           <h3 className="text-sm font-semibold text-foreground mb-2">After Photo</h3>
-          {serviceStatus.photos.afterPhoto ? (
+          {serviceTypeData?.photos?.afterPhoto ? (
             <div className="space-y-2">
               <img
-                src={serviceStatus.photos.afterPhoto}
+                src={serviceTypeData.photos.afterPhoto}
                 alt="After service"
                 className="w-full h-32 object-cover rounded-md border"
               />
-              {serviceStatus.photos.afterNotes && (
-                <p className="text-xs text-muted-foreground">{serviceStatus.photos.afterNotes}</p>
+              {serviceTypeData.photos.afterNotes && (
+                <p className="text-xs text-muted-foreground">{serviceTypeData.photos.afterNotes}</p>
               )}
             </div>
           ) : (
@@ -231,7 +256,7 @@ export function ServiceTypeDetail({ enquiryId, serviceType, onBack }: ServiceTyp
       <Card className="p-4 bg-gradient-card border-0 shadow-soft">
         <h3 className="text-sm font-semibold text-foreground mb-3">Actions</h3>
         
-        {serviceStatus.status === "pending" && (
+        {serviceTypeData?.status === "pending" && (
           <div className="space-y-3">
             <div className="space-y-2">
               <Label className="text-xs">Take Before Photo</Label>
@@ -284,7 +309,7 @@ export function ServiceTypeDetail({ enquiryId, serviceType, onBack }: ServiceTyp
           </div>
         )}
 
-        {serviceStatus.status === "in-progress" && (
+        {serviceTypeData?.status === "in-progress" && (
           <div className="space-y-3">
             <div className="space-y-2">
               <Label className="text-xs">Take After Photo</Label>
@@ -337,7 +362,7 @@ export function ServiceTypeDetail({ enquiryId, serviceType, onBack }: ServiceTyp
           </div>
         )}
 
-        {serviceStatus.status === "done" && (
+        {serviceTypeData?.status === "done" && (
           <div className="text-center py-4">
             <CheckCircle className="h-8 w-8 mx-auto mb-1 text-green-500" />
             <p className="text-sm font-semibold text-foreground">Service Completed!</p>
@@ -349,4 +374,17 @@ export function ServiceTypeDetail({ enquiryId, serviceType, onBack }: ServiceTyp
       </Card>
     </div>
   );
+}
+
+function getStatusColor(status: string) {
+  switch (status) {
+    case "pending":
+      return "bg-yellow-500 text-white";
+    case "in-progress":
+      return "bg-blue-500 text-white";
+    case "done":
+      return "bg-green-500 text-white";
+    default:
+      return "bg-gray-500 text-white";
+  }
 }
