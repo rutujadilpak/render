@@ -1,4 +1,3 @@
-import { apiClient } from './api';
 import { 
   ServiceDetails, 
   ServiceStats, 
@@ -7,192 +6,267 @@ import {
   ServiceStartRequest,
   ServiceCompleteRequest,
   FinalPhotoRequest,
-  WorkflowCompleteRequest
+  WorkflowCompleteRequest,
+  ApiResponse
 } from '@/types';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
-const API_BASE = '/api/services';
+// API Configuration - SAME AS PICKUP
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (
+  typeof window !== 'undefined' && window.location.origin !== 'http://localhost:5173' 
+    ? `${window.location.origin}/api`
+    : 'http://localhost:3001/api'
+);
 
-export const serviceApiService = {
-  // Get all service stage enquiries
-  async getServiceEnquiries(): Promise<ServiceDetails[]> {
+const X_TOKEN = import.meta.env.VITE_X_TOKEN || 'cobbler_super_secret_token_2024';
+
+// HTTP Client with authentication - SAME AS PICKUP
+class ApiClient {
+  private baseURL: string;
+  private token: string;
+
+  constructor(baseURL: string, token: string) {
+    this.baseURL = baseURL;
+    this.token = token;
+  }
+
+  private async request<T>(
+    endpoint: string,
+    options: RequestInit = {}
+  ): Promise<T> {
+    const url = `${this.baseURL}${endpoint}`;
+    
+    const config: RequestInit = {
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Token': this.token,
+        ...options.headers,
+      },
+      ...options,
+    };
+
     try {
-      const url = `${API_BASE}/enquiries`;
-      console.log('🔍 serviceApiService.getServiceEnquiries - Calling URL:', url);
-      console.log('🔍 serviceApiService.getServiceEnquiries - API_BASE:', API_BASE);
+      const response = await fetch(url, config);
       
-      const response = await apiClient.get(`${API_BASE}/enquiries`);
-      console.log('🔍 serviceApiService.getServiceEnquiries - Response:', response);
-      
-      return response.data || [];
-    } catch (error) {
-      console.error('Error fetching service enquiries:', error);
-      throw new Error('Failed to fetch service enquiries');
-    }
-  },
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+      }
 
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error(`API request failed for ${endpoint}:`, error);
+      throw error;
+    }
+  }
+
+  async get<T>(endpoint: string, params?: Record<string, any>): Promise<T> {
+    const url = params ? `${endpoint}?${new URLSearchParams(params)}` : endpoint;
+    return this.request<T>(url, { method: 'GET' });
+  }
+
+  async post<T>(endpoint: string, data?: any): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'POST',
+      body: data ? JSON.stringify(data) : undefined,
+    });
+  }
+
+  async patch<T>(endpoint: string, data?: any): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'PATCH',
+      body: data ? JSON.stringify(data) : undefined,
+    });
+  }
+}
+
+// Create API client instance - SAME AS PICKUP
+const apiClient = new ApiClient(API_BASE_URL, X_TOKEN);
+
+// Service API Service - FOLLOWING PICKUP PATTERN
+export class ServiceApiService {
   // Get service statistics
-  async getServiceStats(): Promise<ServiceStats> {
+  static async getServiceStats(): Promise<ServiceStats> {
     try {
-      const response = await apiClient.get(`${API_BASE}/stats`);
-      return response.data || {
-        pendingCount: 0,
-        inProgressCount: 0,
-        doneCount: 0,
-        totalServices: 0
-      };
+      const response = await apiClient.get<ApiResponse<ServiceStats>>('/services/stats');
+      
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to fetch service statistics');
+      }
+      
+      return response.data!;
     } catch (error) {
-      console.error('Error fetching service stats:', error);
-      throw new Error('Failed to fetch service statistics');
+      console.error('Failed to get service statistics:', error);
+      throw error;
     }
-  },
+  }
+
+  // Get all service stage enquiries
+  static async getServiceEnquiries(): Promise<ServiceDetails[]> {
+    try {
+      const response = await apiClient.get<ApiResponse<ServiceDetails[]>>('/services/enquiries');
+      
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to fetch service enquiries');
+      }
+      
+      return response.data!;
+    } catch (error) {
+      console.error('Failed to get service enquiries:', error);
+      throw error;
+    }
+  }
 
   // Get specific enquiry service details
-  async getEnquiryServiceDetails(enquiryId: number): Promise<ServiceDetails | null> {
+  static async getEnquiryServiceDetails(enquiryId: number): Promise<ServiceDetails | null> {
     try {
-      const response = await apiClient.get(`${API_BASE}/enquiries/${enquiryId}`);
-      return response.data || null;
+      const response = await apiClient.get<ApiResponse<ServiceDetails>>(`/services/enquiries/${enquiryId}`);
+      
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to fetch enquiry service details');
+      }
+      
+      return response.data!;
     } catch (error) {
-      console.error('Error fetching enquiry service details:', error);
-      throw new Error('Failed to fetch enquiry service details');
+      console.error('Failed to get enquiry service details:', error);
+      throw error;
     }
-  },
+  }
 
   // Assign services to an enquiry
-  async assignServices(enquiryId: number, serviceTypes: ServiceType[]): Promise<void> {
+  static async assignServices(enquiryId: number, serviceTypes: ServiceType[]): Promise<void> {
     try {
-      const request: ServiceAssignmentRequest = {
+      const response = await apiClient.post<ApiResponse<any>>(`/services/enquiries/${enquiryId}/assign`, {
         enquiryId,
         serviceTypes
-      };
+      });
       
-      await apiClient.post(`${API_BASE}/enquiries/${enquiryId}/assign`, request);
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to assign services');
+      }
     } catch (error) {
-      console.error('Error assigning services:', error);
-      throw new Error('Failed to assign services');
+      console.error('Failed to assign services:', error);
+      throw error;
     }
-  },
+  }
 
   // Start a service
-  async startService(enquiryId: number, serviceTypeId: number, beforePhoto: string, notes?: string): Promise<void> {
+  static async startService(enquiryId: number, serviceTypeId: number, beforePhoto: string, notes?: string): Promise<void> {
     try {
-      const request: ServiceStartRequest = {
+      const response = await apiClient.post<ApiResponse<any>>(`/services/enquiries/${enquiryId}/start`, {
         serviceTypeId,
         beforePhoto,
         notes
-      };
+      });
       
-      await apiClient.post(`${API_BASE}/enquiries/${enquiryId}/start`, request);
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to start service');
+      }
     } catch (error) {
-      console.error('Error starting service:', error);
-      throw new Error('Failed to start service');
+      console.error('Failed to start service:', error);
+      throw error;
     }
-  },
+  }
 
   // Complete a service
-  async completeService(enquiryId: number, serviceTypeId: number, afterPhoto: string, notes?: string): Promise<void> {
+  static async completeService(enquiryId: number, serviceTypeId: number, afterPhoto: string, notes?: string): Promise<void> {
     try {
-      const request: ServiceCompleteRequest = {
+      const response = await apiClient.post<ApiResponse<any>>(`/services/enquiries/${enquiryId}/complete`, {
         serviceTypeId,
         afterPhoto,
         notes
-      };
+      });
       
-      await apiClient.post(`${API_BASE}/enquiries/${enquiryId}/complete`, request);
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to complete service');
+      }
     } catch (error) {
-      console.error('Error completing service:', error);
-      throw new Error('Failed to complete service');
+      console.error('Failed to complete service:', error);
+      throw error;
     }
-  },
+  }
 
   // Save final overall photo
-  async saveFinalPhoto(enquiryId: number, afterPhoto: string, notes?: string): Promise<void> {
+  static async saveFinalPhoto(enquiryId: number, afterPhoto: string, notes?: string): Promise<void> {
     try {
-      const request: FinalPhotoRequest = {
+      const response = await apiClient.post<ApiResponse<any>>(`/services/enquiries/${enquiryId}/final-photo`, {
         enquiryId,
         afterPhoto,
         notes
-      };
+      });
       
-      await apiClient.post(`${API_BASE}/enquiries/${enquiryId}/final-photo`, request);
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to save final photo');
+      }
     } catch (error) {
-      console.error('Error saving final photo:', error);
-      throw new Error('Failed to save final photo');
+      console.error('Failed to save final photo:', error);
+      throw error;
     }
-  },
+  }
 
   // Complete workflow and move to billing
-  async completeWorkflow(enquiryId: number, actualCost: number, workNotes?: string): Promise<void> {
+  static async completeWorkflow(enquiryId: number, actualCost: number, workNotes?: string): Promise<void> {
     try {
-      const request: WorkflowCompleteRequest = {
+      const response = await apiClient.post<ApiResponse<any>>(`/services/enquiries/${enquiryId}/complete-workflow`, {
         enquiryId,
         actualCost,
         workNotes
-      };
+      });
       
-      await apiClient.post(`${API_BASE}/enquiries/${enquiryId}/complete-workflow`, request);
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to complete workflow');
+      }
     } catch (error) {
-      console.error('Error completing workflow:', error);
-      throw new Error('Failed to complete workflow');
+      console.error('Failed to complete workflow:', error);
+      throw error;
     }
   }
-};
+}
 
-// Custom hook for service enquiries with polling
-export const useServiceEnquiries = (pollingInterval: number = 2000) => {
+// Hook for managing service enquiries with polling - SAME PATTERN AS PICKUP
+export function useServiceEnquiries(pollInterval: number = 2000) {
   const [enquiries, setEnquiries] = useState<ServiceDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
 
-  useEffect(() => {
-    let intervalId: NodeJS.Timeout;
-
-    const fetchEnquiries = async () => {
-      try {
-        setError(null);
-        const data = await serviceApiService.getServiceEnquiries();
-        setEnquiries(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch enquiries');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    // Initial fetch
-    fetchEnquiries();
-
-    // Set up polling
-    if (pollingInterval > 0) {
-      intervalId = setInterval(fetchEnquiries, pollingInterval);
-    }
-
-    return () => {
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
-    };
-  }, [pollingInterval]);
-
-  const refetch = async () => {
+  const fetchServiceEnquiries = useCallback(async () => {
     try {
-      console.log('🔄 useServiceEnquiries.refetch - Starting manual refetch...');
       setError(null);
-      const data = await serviceApiService.getServiceEnquiries();
-      console.log('🔄 useServiceEnquiries.refetch - Got data:', data);
-      setEnquiries(data);
-      console.log('✅ useServiceEnquiries.refetch - Data updated successfully');
+      const result = await ServiceApiService.getServiceEnquiries();
+      setEnquiries(result);
+      setLastUpdate(new Date());
     } catch (err) {
-      console.error('❌ useServiceEnquiries.refetch - Error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch enquiries');
+      setError(err instanceof Error ? err.message : 'Failed to fetch service enquiries');
+      console.error('Error fetching service enquiries:', err);
+    } finally {
+      setLoading(false);
     }
+  }, []);
+
+  // Initial fetch
+  useEffect(() => {
+    fetchServiceEnquiries();
+  }, [fetchServiceEnquiries]);
+
+  // Set up polling
+  useEffect(() => {
+    const interval = setInterval(fetchServiceEnquiries, pollInterval);
+    return () => clearInterval(interval);
+  }, [fetchServiceEnquiries, pollInterval]);
+
+  return {
+    enquiries,
+    loading,
+    error,
+    lastUpdate,
+    refetch: fetchServiceEnquiries,
   };
+}
 
-  return { enquiries, loading, error, refetch };
-};
-
-// Custom hook for service stats with polling
-export const useServiceStats = (pollingInterval: number = 200000) => {
+// Hook for service statistics - SAME PATTERN AS PICKUP
+export function useServiceStats(pollInterval: number = 5000) {
   const [stats, setStats] = useState<ServiceStats>({
     pendingCount: 0,
     inProgressCount: 0,
@@ -202,35 +276,36 @@ export const useServiceStats = (pollingInterval: number = 200000) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let intervalId: NodeJS.Timeout;
-
-    const fetchStats = async () => {
-      try {
-        setError(null);
-        const data = await serviceApiService.getServiceStats();
-        setStats(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch stats');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    // Initial fetch
-    fetchStats();
-
-    // Set up polling
-    if (pollingInterval > 0) {
-      intervalId = setInterval(fetchStats, pollingInterval);
+  const fetchStats = useCallback(async () => {
+    try {
+      setError(null);
+      const result = await ServiceApiService.getServiceStats();
+      setStats(result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch service statistics');
+      console.error('Error fetching service statistics:', err);
+    } finally {
+      setLoading(false);
     }
+  }, []);
 
-    return () => {
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
-    };
-  }, [pollingInterval]);
+  useEffect(() => {
+    fetchStats();
+    
+    // Refresh stats every 5 seconds
+    const interval = setInterval(fetchStats, pollInterval);
+    return () => clearInterval(interval);
+  }, [fetchStats, pollInterval]);
 
-  return { stats, loading, error };
-};
+  return {
+    stats,
+    loading,
+    error,
+    refetch: fetchStats,
+  };
+}
+
+// Export the service API service for compatibility
+export const serviceApiService = ServiceApiService;
+
+export default ServiceApiService;

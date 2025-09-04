@@ -2,6 +2,10 @@
 
 echo "Posting sample enquiries with valid enums..."
 
+# URL = https://<URL/api/enquiries?limit=1000
+# URL = 'http://localhost:3001/api/enquiries'
+
+
 # 1 - Facebook + Wallet
 curl 'http://localhost:3001/api/enquiries' \
   -H 'Accept: */*' -H 'Content-Type: application/json' \
