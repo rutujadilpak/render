@@ -12,15 +12,19 @@ export function InvoiceDisplay({ enquiry }: InvoiceDisplayProps) {
   const billingDetails = enquiry.serviceDetails.billingDetails;
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-IN');
+    if (!dateString) return new Date().toLocaleDateString('en-IN');
+    const date = new Date(dateString);
+    return isNaN(date.getTime()) ? new Date().toLocaleDateString('en-IN') : date.toLocaleDateString('en-IN');
   };
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number | string) => {
+    const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+    if (isNaN(numAmount)) return '₹0.00';
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
       minimumFractionDigits: 2
-    }).format(amount);
+    }).format(numAmount);
   };
 
   return (
@@ -116,27 +120,27 @@ export function InvoiceDisplay({ enquiry }: InvoiceDisplayProps) {
                     </div>
                   </td>
                   <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                    <p style={{ fontWeight: '500', color: '#111827', margin: '0' }}>{formatCurrency(item.originalAmount)}</p>
+                    <p style={{ fontWeight: '500', color: '#111827', margin: '0' }}>{formatCurrency(parseFloat(item.originalAmount) || 0)}</p>
                   </td>
                   <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                    {item.discountAmount > 0 ? (
-                      <p style={{ color: '#059669', margin: '0' }}>-{formatCurrency(item.discountAmount)}</p>
+                    {(parseFloat(item.discountAmount) || 0) > 0 ? (
+                      <p style={{ color: '#059669', margin: '0' }}>-{formatCurrency(parseFloat(item.discountAmount) || 0)}</p>
                     ) : (
                       <p style={{ color: '#6b7280', margin: '0' }}>-</p>
                     )}
                   </td>
                   <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                    {item.gstAmount > 0 ? (
+                    {(parseFloat(item.gstAmount) || 0) > 0 ? (
                       <div>
-                        <p style={{ color: '#2563eb', margin: '0', fontSize: '12px' }}>({item.gstRate}%)</p>
-                        <p style={{ color: '#2563eb', margin: '0' }}>+{formatCurrency(item.gstAmount)}</p>
+                        <p style={{ color: '#2563eb', margin: '0', fontSize: '12px' }}>({parseFloat(item.gstRate) || 0}%)</p>
+                        <p style={{ color: '#2563eb', margin: '0' }}>+{formatCurrency(parseFloat(item.gstAmount) || 0)}</p>
                       </div>
                     ) : (
                       <p style={{ color: '#6b7280', margin: '0' }}>-</p>
                     )}
                   </td>
                   <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                    <p style={{ fontWeight: '500', color: '#111827', margin: '0' }}>{formatCurrency(item.finalAmount + item.gstAmount)}</p>
+                    <p style={{ fontWeight: '500', color: '#111827', margin: '0' }}>{formatCurrency((parseFloat(item.finalAmount) || 0) + (parseFloat(item.gstAmount) || 0))}</p>
                   </td>
                 </tr>
               ))}
@@ -151,29 +155,29 @@ export function InvoiceDisplay({ enquiry }: InvoiceDisplayProps) {
           <div style={{ width: '320px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '8px' }}>
               <span style={{ color: '#6b7280' }}>Original Amount:</span>
-              <span style={{ fontWeight: '500' }}>{formatCurrency(billingDetails.finalAmount)}</span>
+              <span style={{ fontWeight: '500' }}>{formatCurrency(billingDetails.items.reduce((sum, item) => sum + (parseFloat(item.originalAmount) || 0), 0))}</span>
             </div>
-                          {billingDetails.items.some(item => (item.discountAmount || 0) > 0) && (
+                          {billingDetails.items.some(item => (parseFloat(item.discountAmount) || 0) > 0) && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '8px', color: '#059669' }}>
                   <span>
                     Service Discounts:
                   </span>
-                  <span>-{formatCurrency(billingDetails.items.reduce((sum, item) => sum + (item.discountAmount || 0), 0))}</span>
+                  <span>-{formatCurrency(billingDetails.items.reduce((sum, item) => sum + (parseFloat(item.discountAmount) || 0), 0))}</span>
                 </div>
               )}
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '8px', borderTop: '1px solid #e5e7eb', paddingTop: '8px' }}>
               <span style={{ fontWeight: '500', color: '#111827' }}>Subtotal:</span>
-              <span style={{ fontWeight: '500', color: '#111827' }}>{formatCurrency(billingDetails.subtotal)}</span>
+              <span style={{ fontWeight: '500', color: '#111827' }}>{formatCurrency(parseFloat(billingDetails.subtotal) || 0)}</span>
             </div>
-            {billingDetails.gstIncluded && billingDetails.gstAmount > 0 && (
+            {billingDetails.gstIncluded && (parseFloat(billingDetails.gstAmount) || 0) > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginBottom: '8px', color: '#2563eb' }}>
-                <span>GST ({billingDetails.gstRate}%):</span>
-                <span>+{formatCurrency(billingDetails.gstAmount)}</span>
+                <span>Total GST:</span>
+                <span>+{formatCurrency(parseFloat(billingDetails.gstAmount) || 0)}</span>
               </div>
             )}
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '18px', fontWeight: 'bold', borderTop: '2px solid #d1d5db', paddingTop: '8px' }}>
               <span>Total Amount:</span>
-              <span style={{ color: '#2563eb' }}>{formatCurrency(billingDetails.totalAmount)}</span>
+              <span style={{ color: '#2563eb' }}>{formatCurrency(parseFloat(billingDetails.totalAmount) || 0)}</span>
             </div>
           </div>
         </div>

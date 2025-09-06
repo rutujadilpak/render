@@ -39,12 +39,12 @@
 // //       setShowPendingPickups(true);
 // //       return;
 // //     }
-
+    
 // //     if (view === "service-completion") {
 // //       setShowCompletedServices(true);
 // //       return;
 // //     }
-
+    
 // //     if (view === "in-service") {
 // //       setShowInService(true);
 // //       return;
@@ -52,7 +52,7 @@
 
 // //     setCurrentView(view);
 // //     setActiveAction(action || null);
-
+    
 // //     // Reset all table views when navigating to other views
 // //     setShowAllEnquiries(false);
 // //     setShowPendingPickups(false);
@@ -73,7 +73,7 @@
 // //     if (showInService) {
 // //       return <InServiceTable onBack={() => setShowInService(false)} />;
 // //     }
-
+    
 // //     switch (currentView) {
 // //       case "dashboard":
 // //         return <DashboardOverview onNavigate={handleViewChange} />;
@@ -164,12 +164,12 @@
 //       setShowPendingPickups(true);
 //       return;
 //     }
-
+    
 //     if (view === "service-completion") {
 //       setShowCompletedServices(true);
 //       return;
 //     }
-
+    
 //     if (view === "in-service") {
 //       setShowInService(true);
 //       return;
@@ -177,7 +177,7 @@
 
 //     setCurrentView(view);
 //     setActiveAction(action || null);
-
+    
 //     // Reset all table views when navigating to other views
 //     setShowAllEnquiries(false);
 //     setShowPendingPickups(false);
@@ -198,7 +198,7 @@
 //     if (showInService) {
 //       return <InServiceTable onBack={() => setShowInService(false)} />;
 //     }
-
+    
 //     switch (currentView) {
 //       case "dashboard":
 //         return <DashboardOverview onNavigate={handleViewChange} />;
@@ -259,18 +259,18 @@ import { CRMModule } from "@/components/crm/CRMModule";
 import InventoryModule from "@/components/inventory/InventoryModule";
 import ExpenseModule from "@/components/expenses/ExpenseModule";
 // Fixed import - using default import instead of named import
-import { PickupModule } from "@/components/pickup/PickupModule";
+import {PickupModule} from "@/components/pickup/PickupModule";
 import { ServiceModule } from "@/components/service/ServiceModule";
 import { DeliveryModule } from "@/components/delivery/DeliveryModule";
 import { WorkDoneModule } from "@/components/work-done/WorkDoneModule";
 import { CompletedModule } from "@/components/completed/CompletedModule";
-import ReportsModule from "@/components/reports/ReportsModule";
+import  ReportsModule from "@/components/reports/ReportsModule";
 import { SettingsModule } from "@/components/settings/SettingsModule";
+import { BillingModule } from "@/components/billing/BillingModule";
 import { AllEnquiriesTable } from "@/components/crm/AllEnquiriesTable";
 import { PendingPickupsTable } from "@/components/pickup/PendingPickupsTable";
 import { ServiceCompletionTable } from "@/components/service/ServiceCompletionTable";
 import { InServiceTable } from "@/components/service/InServiceTable";
-import { BillingModule } from "@/components/billing/BillingModule";
 
 const Index = () => {
   const [currentView, setCurrentView] = useState("dashboard");
@@ -290,12 +290,12 @@ const Index = () => {
       setShowPendingPickups(true);
       return;
     }
-
+    
     if (view === "service-completion") {
       setShowCompletedServices(true);
       return;
     }
-
+    
     if (view === "in-service") {
       setShowInService(true);
       return;
@@ -303,7 +303,7 @@ const Index = () => {
 
     setCurrentView(view);
     setActiveAction(action || null);
-
+    
     // Reset all table views when navigating to other views
     setShowAllEnquiries(false);
     setShowPendingPickups(false);
@@ -316,21 +316,15 @@ const Index = () => {
       return <AllEnquiriesTable onBack={() => setShowAllEnquiries(false)} />;
     }
     if (showPendingPickups) {
-      return (
-        <PendingPickupsTable onBack={() => setShowPendingPickups(false)} />
-      );
+      return <PendingPickupsTable onBack={() => setShowPendingPickups(false)} />;
     }
     if (showCompletedServices) {
-      return (
-        <ServiceCompletionTable
-          onBack={() => setShowCompletedServices(false)}
-        />
-      );
+      return <ServiceCompletionTable onBack={() => setShowCompletedServices(false)} />;
     }
     if (showInService) {
       return <InServiceTable onBack={() => setShowInService(false)} />;
     }
-
+    
     switch (currentView) {
       case "dashboard":
         return <DashboardOverview onNavigate={handleViewChange} />;

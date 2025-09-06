@@ -248,6 +248,52 @@ export interface ServiceOrder {
   updatedAt: string;
 }
 
+// Billing API types - Added for backend API integration
+export interface BillingStats {
+  pendingBilling: number;
+  invoicesGenerated: number;
+  totalBilled: number;
+  invoicesSent: number;
+}
+
+export interface BillingEnquiry {
+  id: number;
+  customerName: string;
+  phone: string;
+  address: string;
+  product: string;
+  quantity: number;
+  currentStage: string;
+  serviceDetails?: {
+    serviceTypes?: Array<{
+      type: string;
+      status: string;
+      workNotes?: string;
+    }>;
+    estimatedCost?: number;
+    billingDetails?: BillingDetails;
+  };
+}
+
+export interface BillingCreateRequest {
+  finalAmount: number;
+  gstIncluded: boolean;
+  gstRate: number;
+  gstAmount: number;
+  subtotal: number;
+  totalAmount: number;
+  customerName: string;
+  customerPhone: string;
+  customerAddress: string;
+  businessInfo?: BusinessInfo;
+  notes?: string;
+  items: BillingItem[];
+}
+
+export interface BillingMoveToDeliveryRequest {
+  // No additional data needed for now
+}
+
 export interface PickupOrder {
   id: number;
   customerId?: number;

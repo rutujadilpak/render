@@ -259,18 +259,22 @@ export const createTables = async (): Promise<void> => {
         INDEX idx_status (status)
       )`,
       
-      // Billing details
+      // Billing details - Updated to match current BillingDetails structure
       `CREATE TABLE IF NOT EXISTS billing_details (
         id INT PRIMARY KEY AUTO_INCREMENT,
         enquiry_id INT NOT NULL,
         final_amount DECIMAL(10,2) NOT NULL,
-        gst_included BOOLEAN DEFAULT FALSE,
+        gst_included BOOLEAN DEFAULT TRUE,
         gst_rate DECIMAL(5,2) DEFAULT 18.00,
         gst_amount DECIMAL(10,2) NOT NULL,
         subtotal DECIMAL(10,2) NOT NULL,
         total_amount DECIMAL(10,2) NOT NULL,
         invoice_number VARCHAR(50) NULL,
         invoice_date DATE NULL,
+        customer_name VARCHAR(255) NOT NULL,
+        customer_phone VARCHAR(20) NOT NULL,
+        customer_address TEXT NOT NULL,
+        business_info JSON NULL,
         notes TEXT NULL,
         generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (enquiry_id) REFERENCES enquiries(id) ON DELETE CASCADE,
