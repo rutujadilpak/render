@@ -31,7 +31,7 @@ export function CompletedModule() {
     loadCompletedEnquiries();
     
     // Refresh data every 2 seconds to catch newly completed items
-    const interval = setInterval(loadCompletedEnquiries, 2000);
+    const interval = setInterval(loadCompletedEnquiries, 200000);
     
     return () => clearInterval(interval);
   }, []);

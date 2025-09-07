@@ -463,3 +463,80 @@ export interface SearchParams {
   page: number;
   limit: number;
 }
+
+// Delivery statistics interface
+export interface DeliveryStats {
+  readyForDelivery: number;
+  scheduledDeliveries: number;
+  outForDelivery: number;
+  deliveredToday: number;
+}
+
+// Delivery details interface
+export interface DeliveryDetails {
+  status: DeliveryStatus;
+  deliveryMethod?: DeliveryMethod;
+  scheduledTime?: string;
+  assignedTo?: string;
+  deliveryAddress?: string;
+  customerSignature?: string;
+  deliveryNotes?: string;
+  deliveredAt?: string;
+  photos?: {
+    beforePhoto?: string; // Service completed photo
+    afterPhoto?: string;  // Delivery proof photo
+  };
+}
+
+// Delivery enquiry interface (extends basic Enquiry with delivery-specific data)
+export interface DeliveryEnquiry {
+  id: number;
+  customerName: string;
+  phone: string;
+  address: string;
+  message: string;
+  inquiryType: 'Instagram' | 'Facebook' | 'WhatsApp' | 'Phone' | 'Walk-in' | 'Website';
+  product: 'Bag' | 'Shoe' | 'Wallet' | 'Belt' | 'All type furniture';
+  quantity: number;
+  date: string;
+  status: 'new' | 'contacted' | 'converted' | 'closed' | 'lost';
+  contacted: boolean;
+  contactedAt?: string;
+  assignedTo?: string;
+  notes?: string;
+  currentStage: 'enquiry' | 'pickup' | 'service' | 'billing' | 'delivery' | 'completed';
+  quotedAmount?: number;
+  finalAmount?: number;
+  createdAt: string;
+  updatedAt: string;
+  
+  // Delivery-specific data
+  deliveryDetails?: DeliveryDetails;
+  
+  // Service details (for showing service completed photo)
+  serviceDetails?: {
+    estimatedCost?: number;
+    actualCost?: number;
+    workNotes?: string;
+    completedAt?: string;
+    overallPhotos?: {
+      afterPhoto?: string; // Service final photo to show in delivery
+    };
+  };
+}
+
+// Request interfaces for API calls
+export interface ScheduleDeliveryRequest {
+  deliveryMethod: DeliveryMethod;
+  scheduledTime: string;
+}
+
+export interface MarkOutForDeliveryRequest {
+  assignedTo: string;
+}
+
+export interface CompleteDeliveryRequest {
+  deliveryProofPhoto: string;
+  customerSignature?: string;
+  deliveryNotes?: string;
+}

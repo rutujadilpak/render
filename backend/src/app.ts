@@ -15,6 +15,7 @@ import enquiriesRouter from './routes/enquiries';
 import pickupRouter from './routes/pickup';
 import serviceRouter from './routes/service';
 import billingRouter from './routes/billing';
+import deliveryRoutes from './routes/delivery';
 
 // Load environment variables
 dotenv.config();
@@ -122,6 +123,7 @@ app.use('/api/enquiries', enquiriesRouter);
 app.use('/api/pickup', pickupRouter);
 app.use('/api/services', serviceRouter);
 app.use('/api/billing', billingRouter);
+app.use('/api/delivery', deliveryRoutes);
 
 // Serve static files from the React app build directory
 if (process.env.NODE_ENV === 'production') {

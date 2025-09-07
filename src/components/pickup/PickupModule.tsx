@@ -46,7 +46,7 @@ export function PickupModule() {
     assignPickup, 
     markCollected,
     markReceived
-  } = usePickupEnquiries(2000);
+  } = usePickupEnquiries(200000);
   
   const { 
     stats, 

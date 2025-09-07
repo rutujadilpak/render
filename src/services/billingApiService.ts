@@ -8,11 +8,13 @@ import {
 import { useState, useEffect, useCallback } from 'react';
 
 // API Configuration - SAME AS PICKUP/SERVICE
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (
-  typeof window !== 'undefined' && window.location.origin !== 'http://localhost:5173' 
-    ? `${window.location.origin}/api`
-    : 'http://localhost:3001/api'
-);
+// const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (
+//   typeof window !== 'undefined' && window.location.origin !== 'http://localhost:5173' 
+//     ? `${window.location.origin}/api`
+//     : 'http://localhost:3001/api'
+// );
+
+const API_BASE_URL='http://localhost:3001/api';
 
 const X_TOKEN = import.meta.env.VITE_X_TOKEN || 'cobbler_super_secret_token_2024';
 
@@ -194,7 +196,7 @@ export class BillingApiService {
 }
 
 // Hook for managing billing enquiries with polling - SAME PATTERN AS PICKUP/SERVICE
-export function useBillingEnquiries(pollInterval: number = 2000) {
+export function useBillingEnquiries(pollInterval: number = 200000) {
   const [enquiries, setEnquiries] = useState<BillingEnquiry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

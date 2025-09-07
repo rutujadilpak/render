@@ -283,7 +283,7 @@ export function CRMModule({ activeAction }: CRMModuleProps = {}) {
     setTimeout(() => {
       setShowSuccess(false);
       setShowForm(false);
-    }, 2000);
+    }, 200000);
   };
 
   const handleEdit = (enquiry: Enquiry) => {

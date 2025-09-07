@@ -2,13 +2,13 @@ import { Enquiry, ApiResponse } from '@/types';
 import { useState, useEffect, useCallback } from 'react';
 
 // API Configuration
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (
-  typeof window !== 'undefined' && window.location.origin !== 'http://localhost:5173' 
-    ? `${window.location.origin}/api`
-    : 'http://localhost:3001/api'
-);
+// const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (
+//   typeof window !== 'undefined' && window.location.origin !== 'http://localhost:5173' 
+//     ? `${window.location.origin}/api`
+//     : 'http://localhost:3001/api'
+// );
 
-//const API_BASE_URL='http://localhost:3001/api';
+const API_BASE_URL='http://localhost:3001/api';
 
 const X_TOKEN = import.meta.env.VITE_X_TOKEN || 'cobbler_super_secret_token_2024';
 
@@ -208,7 +208,7 @@ export class PickupApiService {
 }
 
 // Hook for managing pickup enquiries with polling
-export function usePickupEnquiries(pollInterval: number = 2000) {
+export function usePickupEnquiries(pollInterval: number = 200000) {
   const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -357,7 +357,7 @@ export function usePickupStats() {
     fetchStats();
     
     // Refresh stats every 2 seconds to match pickup enquiries polling
-    const interval = setInterval(fetchStats, 2000);
+    const interval = setInterval(fetchStats, 200000);
     return () => clearInterval(interval);
   }, [fetchStats]);
 
