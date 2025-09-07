@@ -342,7 +342,7 @@ export default function ReportsModule() {
     };
 
     loadData();
-    const interval = setInterval(loadData, 5000); // Refresh every 5 seconds
+    const interval = setInterval(loadData, 500000); // Refresh every 5 seconds
     return () => clearInterval(interval);
   }, []);
 

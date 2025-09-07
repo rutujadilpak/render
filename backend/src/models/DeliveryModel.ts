@@ -303,7 +303,7 @@ export class DeliveryModel {
     try {
       logDatabase.query('Completing delivery', { enquiryId, hasProofPhoto: !!deliveryProofPhoto, hasSignature: !!customerSignature });
       
-      const currentTime = new Date().toISOString();
+      const currentTime = new Date().toISOString().split('T')[0];
       
       // Use transaction to ensure consistency
       const queries = [

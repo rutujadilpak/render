@@ -7,13 +7,13 @@ import {
 import { useState, useEffect, useCallback } from 'react';
 
 // API Configuration - SAME AS OTHER MODULES
-// const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (
-//   typeof window !== 'undefined' && window.location.origin !== 'http://localhost:5173' 
-//     ? `${window.location.origin}/api`
-//     : 'http://localhost:3001/api'
-// );
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (
+  typeof window !== 'undefined' && window.location.origin !== 'http://localhost:5173' 
+    ? `${window.location.origin}/api`
+    : 'http://localhost:3001/api'
+);
 
-const API_BASE_URL='http://localhost:3001/api';
+//const API_BASE_URL='http://localhost:3001/api';
 
 
 const X_TOKEN = import.meta.env.VITE_X_TOKEN || 'cobbler_super_secret_token_2024';
@@ -361,7 +361,7 @@ export function useDeliveryEnquiries(pollInterval: number = 200000) {
 }
 
 // Hook for delivery statistics - SAME PATTERN AS OTHER MODULES
-export function useDeliveryStats(pollInterval: number = 5000) {
+export function useDeliveryStats(pollInterval: number = 500000) {
   const [stats, setStats] = useState<DeliveryStats>({
     readyForDelivery: 0,
     scheduledDeliveries: 0,

@@ -12,12 +12,12 @@ import {
 import { useState, useEffect, useCallback } from 'react';
 
 // API Configuration - SAME AS PICKUP
-// const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (
-//   typeof window !== 'undefined' && window.location.origin !== 'http://localhost:5173' 
-//     ? `${window.location.origin}/api`
-//     : 'http://localhost:3001/api'
-// );
-const API_BASE_URL='http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (
+  typeof window !== 'undefined' && window.location.origin !== 'http://localhost:5173' 
+    ? `${window.location.origin}/api`
+    : 'http://localhost:3001/api'
+);
+//const API_BASE_URL='http://localhost:3001/api';
 
 const X_TOKEN = import.meta.env.VITE_X_TOKEN || 'cobbler_super_secret_token_2024';
 
@@ -267,7 +267,7 @@ export function useServiceEnquiries(pollInterval: number = 200000) {
 }
 
 // Hook for service statistics - SAME PATTERN AS PICKUP
-export function useServiceStats(pollInterval: number = 5000) {
+export function useServiceStats(pollInterval: number = 500000) {
   const [stats, setStats] = useState<ServiceStats>({
     pendingCount: 0,
     inProgressCount: 0,

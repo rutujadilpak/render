@@ -23,6 +23,34 @@ export const initializeDatabase = async (): Promise<void> => {
   try {
     logDatabase.connection('Initializing database connection pool', dbConfig);
     
+    const dbName = dbConfig.database;
+    const createDbConfig = {
+      host: dbConfig.host,
+      port: dbConfig.port,
+      user: dbConfig.user,
+      password: dbConfig.password,
+      connectionLimit: dbConfig.connectionLimit,
+      acquireTimeout: dbConfig.acquireTimeout,
+      timeout: dbConfig.timeout,
+      reconnect: dbConfig.reconnect,
+      charset: dbConfig.charset,
+      collation: dbConfig.collation
+    };
+    
+    const tempPool = mysql.createPool(createDbConfig);
+    const tempConnection = await tempPool.getConnection();
+    
+    try {
+      await tempConnection.execute(`CREATE DATABASE IF NOT EXISTS \`${dbName}\``);
+      logDatabase.success(`Database '${dbName}' created/verified successfully`);
+    } catch (dbError) {
+      logDatabase.error(`Failed to create database '${dbName}'`, dbError);
+      throw dbError;
+    } finally {
+      tempConnection.release();
+      await tempPool.end();
+    }
+    
     pool = mysql.createPool(dbConfig);
     
     // Test the connection
