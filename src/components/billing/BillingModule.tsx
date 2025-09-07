@@ -45,7 +45,7 @@ export function BillingModule() {
   // const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
   
   // ADDED: API hooks with 2-second polling for real-time updates (same as service module)
-  const { enquiries, loading: enquiriesLoading, error: enquiriesError, refetch, createBilling, moveToDelivery } = useBillingEnquiries(2000);
+  const { enquiries, loading: enquiriesLoading, error: enquiriesError, refetch, createBilling, moveToDelivery } = useBillingEnquiries(200000);
   const { stats, loading: statsLoading, error: statsError } = useBillingStats();
   
   const [searchTerm, setSearchTerm] = useState("");
