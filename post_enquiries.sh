@@ -37,4 +37,3 @@ curl 'https://render-f67c.onrender.com/api/enquiries' \
   --data-raw '{"customerName":"Mohammed Ali","phone":"9877001122","address":"Charminar, Hyderabad","message":"Looking for custom furniture options","inquiryType":"Website","product":"All type furniture","quantity":25,"date":"2025-09-03","status":"new","contacted":false,"currentStage":"enquiry"}'
 
 echo "All sample enquiries posted successfully."
-
