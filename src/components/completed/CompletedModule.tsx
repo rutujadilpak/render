@@ -30,13 +30,13 @@ export function CompletedModule() {
     loading: enquiriesLoading, 
     error: enquiriesError, 
     lastUpdate 
-  } = useCompletedEnquiries(2000); // Poll every 2 seconds
+  } = useCompletedEnquiries(200000); // Poll every 2 seconds
 
   const { 
     stats, 
     loading: statsLoading, 
     error: statsError 
-  } = useCompletedStats(5000); // Poll every 5 seconds
+  } = useCompletedStats(500000); // Poll every 5 seconds
 
   // REASON: Removed localStorage useEffect - now handled by API hooks
   // useEffect(() => {

@@ -184,7 +184,7 @@ export class CompletedApiService {
 }
 
 // Hook for managing completed enquiries with polling - SAME PATTERN AS OTHER SERVICES
-export function useCompletedEnquiries(pollInterval: number = 2000) {
+export function useCompletedEnquiries(pollInterval: number = 200000) {
   const [enquiries, setEnquiries] = useState<CompletedEnquiry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -238,7 +238,7 @@ export function useCompletedEnquiries(pollInterval: number = 2000) {
 }
 
 // Hook for completed statistics - SAME PATTERN AS OTHER SERVICES
-export function useCompletedStats(pollInterval: number = 5000) {
+export function useCompletedStats(pollInterval: number = 500000) {
   const [stats, setStats] = useState<CompletedStats>({
     totalCompleted: 0,
     completedThisWeek: 0,
