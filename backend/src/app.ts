@@ -17,6 +17,7 @@ import serviceRouter from './routes/service';
 import billingRouter from './routes/billing';
 import deliveryRoutes from './routes/delivery';
 import completedRouter from './routes/completed';
+import inventoryRouter from './routes/inventory'; // Added for backend API integration
 
 // Load environment variables
 dotenv.config();
@@ -126,6 +127,7 @@ app.use('/api/services', serviceRouter);
 app.use('/api/billing', billingRouter);
 app.use('/api/delivery', deliveryRoutes);
 app.use('/api/completed', completedRouter);
+app.use('/api/inventory', inventoryRouter); // Added for backend API integration
 
 // Serve static files from the React app build directory
 if (process.env.NODE_ENV === 'production') {

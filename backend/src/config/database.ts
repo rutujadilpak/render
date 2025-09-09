@@ -336,6 +336,41 @@ export const createTables = async (): Promise<void> => {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_username (username),
         INDEX idx_token (token)
+      )`,
+      
+      // Inventory management tables - Added for backend API integration
+      `CREATE TABLE IF NOT EXISTS inventory_items (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        name VARCHAR(255) NOT NULL,
+        category VARCHAR(255) NOT NULL,
+        quantity INT NOT NULL DEFAULT 0,
+        min_stock INT NOT NULL DEFAULT 5,
+        unit VARCHAR(50) NOT NULL,
+        purchase_price DECIMAL(10,2) NOT NULL,
+        selling_price DECIMAL(10,2) NOT NULL,
+        last_updated DATE NOT NULL,
+        last_updated_by VARCHAR(255) NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_name (name),
+        INDEX idx_category (category),
+        INDEX idx_quantity (quantity),
+        INDEX idx_min_stock (min_stock)
+      )`,
+      
+      // Inventory update history tracking - Added for backend API integration
+      `CREATE TABLE IF NOT EXISTS inventory_history (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        inventory_item_id INT NOT NULL,
+        action ENUM('Created', 'Updated') NOT NULL,
+        quantity_change INT NOT NULL,
+        new_quantity INT NOT NULL,
+        updated_by VARCHAR(255) NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (inventory_item_id) REFERENCES inventory_items(id) ON DELETE CASCADE,
+        INDEX idx_inventory_item_id (inventory_item_id),
+        INDEX idx_action (action),
+        INDEX idx_updated_at (updated_at)
       )`
     ];
     

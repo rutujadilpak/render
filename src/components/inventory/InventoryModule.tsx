@@ -17,29 +17,14 @@ import {
   Calendar,
   History,
 } from "lucide-react";
+// Added for backend API integration - replacing localStorage with proper backend APIs
+import { useInventoryItems, useInventoryStats } from "@/services/inventoryApiService";
+import { InventoryItem, UpdateHistory } from "@/types";
 
 
-interface UpdateHistory {
-  date: string;
-  updatedBy: string;
-  action: "Created" | "Updated";
-  quantityChange: number;
-  newQuantity: number;
-}
-
-interface InventoryItem {
-  id: number;
-  name: string;
-  category: string;
-  quantity: number;
-  minStock: number;
-  unit: string;
-  purchasePrice: number;
-  sellingPrice: number;
-  lastUpdated: string;
-  lastUpdatedBy?: string;
-  history: UpdateHistory[];
-}
+// Removed local interfaces - now using types from @/types for backend API integration
+// interface UpdateHistory - now imported from @/types
+// interface InventoryItem - now imported from @/types
 
 interface FormData {
   name: string;
@@ -50,12 +35,26 @@ interface FormData {
   sellingPrice: string;
 }
 
-// Step 1: Removed static data - no sampleInventory array
-
-const STORAGE_KEY = "inventory_data";
+// Removed localStorage constants - now using backend APIs for data persistence
+// const STORAGE_KEY = "inventory_data"; - removed for backend API integration
 
 export default function InventoryManager() {
-  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  // Replaced localStorage state management with backend API hooks for proper data persistence
+  const { 
+    items: inventory, 
+    loading: inventoryLoading, 
+    error: inventoryError, 
+    createItem, 
+    updateItem, 
+    deleteItem 
+  } = useInventoryItems();
+  
+  const { 
+    stats, 
+    loading: statsLoading, 
+    error: statsError 
+  } = useInventoryStats();
+  
   const [searchTerm, setSearchTerm] = useState("");
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
@@ -72,32 +71,18 @@ export default function InventoryManager() {
     sellingPrice: "",
   });
 
-  // Step 1: Modified to start with empty inventory instead of sample data
-  useEffect(() => {
-    const savedInventory = localStorage.getItem(STORAGE_KEY);
-    if (savedInventory) {
-      try {
-        setInventory(JSON.parse(savedInventory));
-      } catch (error) {
-        console.error("Error loading inventory from localStorage:", error);
-        setInventory([]); // Empty array instead of sampleInventory
-      }
-    } else {
-      setInventory([]); // Empty array instead of sampleInventory
-    }
-  }, []);
+  // Removed localStorage useEffect hooks - now using backend APIs for data persistence
+  // useEffect for loading from localStorage - removed for backend API integration
+  // useEffect for saving to localStorage - removed for backend API integration
 
-  // Save to localStorage whenever inventory changes
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(inventory));
-  }, [inventory]);
-
+  // Updated to use backend API stats instead of local calculations for better performance
   const lowStockItems = inventory.filter(
     (item) => item.quantity <= item.minStock
   );
-  const totalItems = inventory.length;
-  const totalQuantity = inventory.reduce((sum, item) => sum + item.quantity, 0);
-  const wellStockedItems = inventory.length - lowStockItems.length;
+  // Using backend API stats when available, fallback to local calculations
+  const totalItems = stats.totalItems || inventory.length;
+  const totalQuantity = stats.totalQuantity || inventory.reduce((sum, item) => sum + item.quantity, 0);
+  const wellStockedItems = stats.wellStockedItems || (inventory.length - lowStockItems.length);
 
   const filteredInventory = inventory.filter(
     (item) =>
@@ -130,7 +115,8 @@ export default function InventoryManager() {
     });
   };
 
-  const handleAddItem = () => {
+  // Updated to use backend API for creating items instead of localStorage
+  const handleAddItem = async () => {
     if (
       !formData.name ||
       !formData.category ||
@@ -143,32 +129,26 @@ export default function InventoryManager() {
       return;
     }
 
-    const newQuantity = parseInt(formData.quantity);
-    const newItem: InventoryItem = {
-      id: Date.now(),
-      name: formData.name,
-      category: formData.category,
-      unit: formData.unit,
-      quantity: newQuantity,
-      minStock: 5, // Default min stock
-      purchasePrice: parseFloat(formData.purchasePrice),
-      sellingPrice: parseFloat(formData.sellingPrice),
-      lastUpdated: getCurrentDate(),
-      lastUpdatedBy: "System",
-      history: [
-        {
-          date: getCurrentDate(),
-          updatedBy: "System",
-          action: "Created",
-          quantityChange: newQuantity,
-          newQuantity: newQuantity,
-        },
-      ],
-    };
-
-    setInventory((prev) => [...prev, newItem]);
-    resetForm();
-    setShowAddForm(false);
+    try {
+      console.log('🔄 [InventoryModule] Creating new inventory item...');
+      const newQuantity = parseInt(formData.quantity);
+      
+      await createItem({
+        name: formData.name,
+        category: formData.category,
+        unit: formData.unit,
+        quantity: newQuantity,
+        purchasePrice: parseFloat(formData.purchasePrice),
+        sellingPrice: parseFloat(formData.sellingPrice)
+      });
+      
+      console.log('✅ [InventoryModule] Successfully created inventory item');
+      resetForm();
+      setShowAddForm(false);
+    } catch (error) {
+      console.error('❌ [InventoryModule] Failed to create inventory item:', error);
+      alert(`Failed to create item: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   };
 
   const checkStockAlert = (item: InventoryItem) => {
@@ -179,47 +159,32 @@ export default function InventoryManager() {
     }
   };
 
-  // Step 2: Fixed update functionality
-  const handleUpdateStock = (item: InventoryItem, newQuantity: number) => {
+  // Updated to use backend API for updating stock instead of localStorage
+  const handleUpdateStock = async (item: InventoryItem, newQuantity: number) => {
     if (!updaterName.trim()) {
       alert("Please provide the name of the person updating the stock.");
       return;
     }
-    const oldQuantity = item.quantity;
-    const quantityChange = newQuantity - oldQuantity;
 
-    setInventory((prev) =>
-      prev.map((invItem) =>
-        invItem.id === item.id
-          ? {
-              ...invItem,
-              quantity: newQuantity,
-              lastUpdated: getCurrentDate(),
-              lastUpdatedBy: updaterName,
-              history: [
-                ...(invItem.history || []),
-                {
-                  date: getCurrentDate(),
-                  updatedBy: updaterName,
-                  action: "Updated",
-                  quantityChange: quantityChange,
-                  newQuantity: newQuantity,
-                },
-              ],
-            }
-          : invItem
-      )
-    );
-
-    checkStockAlert({ ...item, quantity: newQuantity });
-    setEditingItem(null);
-    setShowUpdateForm(false);
-    setUpdateQuantity("");
-    setUpdaterName("");
+    try {
+      console.log('🔄 [InventoryModule] Updating inventory item quantity:', item.id, 'to', newQuantity);
+      
+      await updateItem(item.id, newQuantity, updaterName);
+      
+      console.log('✅ [InventoryModule] Successfully updated inventory item quantity');
+      checkStockAlert({ ...item, quantity: newQuantity });
+      setEditingItem(null);
+      setShowUpdateForm(false);
+      setUpdateQuantity("");
+      setUpdaterName("");
+    } catch (error) {
+      console.error('❌ [InventoryModule] Failed to update inventory item quantity:', error);
+      alert(`Failed to update item: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   };
 
-  // Step 2: Fixed restock functionality
-  const handleRestock = (item: InventoryItem, additionalQuantity: number) => {
+  // Updated to use backend API for restocking instead of localStorage
+  const handleRestock = async (item: InventoryItem, additionalQuantity: number) => {
     if (additionalQuantity <= 0) {
       alert("Please enter a valid quantity to add");
       return;
@@ -229,28 +194,36 @@ export default function InventoryManager() {
       return;
     }
 
-    setInventory((prev) =>
-      prev.map((invItem) =>
-        invItem.id === item.id
-          ? {
-              ...invItem,
-              quantity: invItem.quantity + additionalQuantity,
-              lastUpdated: getCurrentDate(),
-              lastUpdatedBy: updaterName,
-            }
-          : invItem
-      )
-    );
-    setEditingItem(null);
-    setShowUpdateForm(false);
-    setUpdateQuantity("");
-    setUpdaterName("");
+    try {
+      console.log('🔄 [InventoryModule] Restocking inventory item:', item.id, 'with', additionalQuantity);
+      const newQuantity = item.quantity + additionalQuantity;
+      
+      await updateItem(item.id, newQuantity, updaterName);
+      
+      console.log('✅ [InventoryModule] Successfully restocked inventory item');
+      setEditingItem(null);
+      setShowUpdateForm(false);
+      setUpdateQuantity("");
+      setUpdaterName("");
+    } catch (error) {
+      console.error('❌ [InventoryModule] Failed to restock inventory item:', error);
+      alert(`Failed to restock item: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   };
 
-  // Step 4: Added delete functionality
-  const handleDeleteItem = (id: number, name: string) => {
+  // Updated to use backend API for deleting items instead of localStorage
+  const handleDeleteItem = async (id: number, name: string) => {
     if (confirm(`Are you sure you want to delete "${name}"?`)) {
-      setInventory((prev) => prev.filter((item) => item.id !== id));
+      try {
+        console.log('🔄 [InventoryModule] Deleting inventory item:', id);
+        
+        await deleteItem(id);
+        
+        console.log('✅ [InventoryModule] Successfully deleted inventory item:', id);
+      } catch (error) {
+        console.error('❌ [InventoryModule] Failed to delete inventory item:', error);
+        alert(`Failed to delete item: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
     }
   };
 
@@ -290,13 +263,13 @@ export default function InventoryManager() {
         </Button>
       </div>
 
-      {/* Stats */}
+      {/* Stats - Added loading and error states for backend API integration */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Card className="p-3 sm:p-4 bg-white border border-gray-200 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
               <div className="text-lg sm:text-2xl font-bold text-gray-900">
-                {totalItems}
+                {statsLoading ? "..." : totalItems}
               </div>
               <div className="text-xs sm:text-sm text-gray-600">
                 Total Items
@@ -309,7 +282,7 @@ export default function InventoryManager() {
           <div className="flex items-center justify-between">
             <div>
               <div className="text-lg sm:text-2xl font-bold text-gray-900">
-                {totalQuantity}
+                {statsLoading ? "..." : totalQuantity}
               </div>
               <div className="text-xs sm:text-sm text-gray-600">
                 Total Quantity
@@ -322,7 +295,7 @@ export default function InventoryManager() {
           <div className="flex items-center justify-between">
             <div>
               <div className="text-lg sm:text-2xl font-bold text-red-600">
-                {lowStockItems.length}
+                {statsLoading ? "..." : lowStockItems.length}
               </div>
               <div className="text-xs sm:text-sm text-gray-600">
                 Low Stock Alerts
@@ -335,7 +308,7 @@ export default function InventoryManager() {
           <div className="flex items-center justify-between">
             <div>
               <div className="text-lg sm:text-2xl font-bold text-green-600">
-                {wellStockedItems}
+                {statsLoading ? "..." : wellStockedItems}
               </div>
               <div className="text-xs sm:text-sm text-gray-600">
                 Well Stocked
@@ -707,9 +680,31 @@ export default function InventoryManager() {
         </div>
       )}
 
-      {/* Inventory List */}
+      {/* Error Display - Added for backend API integration */}
+      {(inventoryError || statsError) && (
+        <Card className="p-3 sm:p-4 bg-red-50 border border-red-200">
+          <div className="flex items-center space-x-2">
+            <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-red-600" />
+            <div className="text-sm text-red-800">
+              <strong>Error:</strong> {inventoryError || statsError}
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Loading State - Added for backend API integration */}
+      {inventoryLoading && (
+        <Card className="p-3 sm:p-4 bg-blue-50 border border-blue-200">
+          <div className="flex items-center space-x-2">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+            <div className="text-sm text-blue-800">Loading inventory items...</div>
+          </div>
+        </Card>
+      )}
+
+      {/* Inventory List - Added loading and error states for backend API integration */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-        {filteredInventory.length > 0 ? (
+        {!inventoryLoading && filteredInventory.length > 0 ? (
           filteredInventory.map((item) => (
             <Card
               key={item.id}
@@ -780,7 +775,7 @@ export default function InventoryManager() {
               </div>
             </Card>
           ))
-        ) : (
+        ) : !inventoryLoading ? (
           <div className="col-span-1 md:col-span-2 lg:col-span-3 text-center py-10 text-gray-500">
             <Package className="h-12 w-12 mx-auto mb-2" />
             <p>No inventory items found.</p>
@@ -788,7 +783,7 @@ export default function InventoryManager() {
               Click "Add Item" to get started.
             </p>
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );
