@@ -224,7 +224,7 @@ export class InventoryApiService {
 }
 
 // Hook for managing inventory items with polling - SAME PATTERN AS OTHER SERVICES
-export function useInventoryItems(pollInterval: number = 5000) {
+export function useInventoryItems(pollInterval: number = 500000) {
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
