@@ -71,6 +71,11 @@ export const EXPENSE_CATEGORY_OPTIONS = [
   { value: "Utilities", label: "Utilities" },
   { value: "Transportation", label: "Transportation" },
   { value: "Marketing", label: "Marketing" },
+  { value: "Staff Salaries", label: "Staff Salaries" },
+  { value: "Office Supplies", label: "Office Supplies" },
+  { value: "Maintenance", label: "Maintenance" },
+  { value: "Professional Services", label: "Professional Services" },
+  { value: "Insurance", label: "Insurance" },
   { value: "Miscellaneous", label: "Miscellaneous" },
 ] as const;
 

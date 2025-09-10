@@ -143,7 +143,7 @@ export class ExpenseController {
     if (isNaN(body.amount) || body.amount < 0) {
       res.status(400).json({ success: false, error: 'Invalid amount' }); return;
     }
-    const validCats: ExpenseCategory[] = ['Materials', 'Tools', 'Rent', 'Utilities', 'Marketing', 'Others'];
+    const validCats: ExpenseCategory[] = ['Materials', 'Tools', 'Rent', 'Utilities', 'Transportation', 'Marketing', 'Staff Salaries', 'Office Supplies', 'Maintenance', 'Professional Services', 'Insurance', 'Miscellaneous'];
     if (!validCats.includes(body.category)) {
       res.status(400).json({ success: false, error: 'Invalid category' }); return;
     }
@@ -195,7 +195,7 @@ static async update(req: Request, res: Response): Promise<void> {
     if (updates.amount !== undefined && (isNaN(updates.amount) || updates.amount < 0)) {
       res.status(400).json({ success: false, error: 'Amount must be ≥ 0' }); return;
     }
-    const validCats: ExpenseCategory[] = ['Materials','Tools','Rent','Utilities','Marketing','Others'];
+    const validCats: ExpenseCategory[] = ['Materials','Tools','Rent','Utilities','Transportation','Marketing','Staff Salaries','Office Supplies','Maintenance','Professional Services','Insurance','Miscellaneous'];
     if (updates.category && !validCats.includes(updates.category)) {
       res.status(400).json({ success: false, error: `Category must be one of: ${validCats.join(', ')}` }); return;
     }

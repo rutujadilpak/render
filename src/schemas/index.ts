@@ -113,6 +113,11 @@ export const expenseFormSchema = z.object({
     "Utilities",
     "Transportation",
     "Marketing",
+    "Staff Salaries",
+    "Office Supplies", 
+    "Maintenance",
+    "Professional Services",
+    "Insurance",
     "Miscellaneous"
   ]),
   description: z.string().min(5, "Description must be at least 5 characters"),

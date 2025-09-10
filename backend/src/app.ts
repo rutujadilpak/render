@@ -18,6 +18,7 @@ import billingRouter from './routes/billing';
 import deliveryRoutes from './routes/delivery';
 import completedRouter from './routes/completed';
 import expensesRouter from './routes/expenses';
+import inventoryRouter from './routes/inventory';
 import dashboardRouter from './routes/dashboard';
 
 // Load environment variables
@@ -129,6 +130,7 @@ app.use('/api/billing', billingRouter);
 app.use('/api/delivery', deliveryRoutes);
 app.use('/api/completed', completedRouter);
 app.use('/api/expense', expensesRouter);
+app.use('/api/inventory', inventoryRouter);
 app.use('/api/dashboard', dashboardRouter);
 
 

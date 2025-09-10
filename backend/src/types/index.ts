@@ -984,7 +984,7 @@ export type DeliveryStatus = "ready" | "scheduled" | "out-for-delivery" | "deliv
 export type DeliveryMethod = "customer-pickup" | "home-delivery";
 
 export type InventoryCategory = "Polish" | "Soles" | "Thread" | "Hardware" | "Tools" | "Materials" | "Supplies";
-export type ExpenseCategory = "Materials" | "Tools" | "Rent" | "Utilities" | "Marketing" | "Others";
+export type ExpenseCategory = "Materials" | "Tools" | "Rent" | "Utilities" | "Transportation" | "Marketing" | "Staff Salaries" | "Office Supplies" | "Maintenance" | "Professional Services" | "Insurance" | "Miscellaneous";
 
 export type StaffRole = "admin" | "manager" | "technician" | "pickup" | "receptionist";
 
@@ -1356,4 +1356,3 @@ export interface ExpenseFilters {
   page?: number;
   limit?: number;
 }
-

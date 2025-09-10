@@ -13,6 +13,15 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { 
+  useExpenseData, 
+  expenseApiService, 
+  Expense as ApiExpense, 
+  Employee as ApiEmployee,
+  ExpenseCreateRequest,
+  EmployeeCreateRequest,
+  ExpenseStats as ApiExpenseStats
+} from "@/services/expenseApiService";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,170 +55,58 @@ import {
 } from "lucide-react";
 
 
-interface Expense {
-  id: string;
-  title: string;
-  amount: number;
-  category: string;
-  date: string;
-  notes?: string;
+// Using API types - renamed for clarity
+type Expense = ApiExpense & {
+  // Add any local UI-specific properties if needed
   billImage?: string;
   billFileName?: string;
-  createdAt: string;
-  updatedAt: string;
-  employeeId?: string;
-}
+};
 
-interface Employee {
-  id: string;
-  name: string;
-  role: string;
-  monthlySalary: number;
-  dateAdded: string;
-}
+type Employee = ApiEmployee;
 
 const expenseCategories = [
   "Materials",
-  "Tools",
+  "Tools", 
   "Rent",
   "Utilities",
+  "Transportation",
   "Marketing",
-  "Others",
+  "Staff Salaries",
+  "Office Supplies",
+  "Maintenance",
+  "Professional Services",
+  "Insurance",
+  "Miscellaneous",
 ];
 
-// Enhanced storage system with localStorage integration
-class StorageManager {
-  private expenses: Expense[] = [];
-  private employees: Employee[] = [];
-  private readonly EXPENSES_KEY = "expense_management_expenses";
-  private readonly EMPLOYEES_KEY = "expense_management_employees";
-
-  constructor() {
-    this.loadData();
-  }
-
-  private loadData() {
-    try {
-      // Load from localStorage
-      const storedExpenses = localStorage.getItem(this.EXPENSES_KEY);
-      const storedEmployees = localStorage.getItem(this.EMPLOYEES_KEY);
-
-      if (storedExpenses) {
-        this.expenses = JSON.parse(storedExpenses);
-      } else {
-        // Initialize with sample data if localStorage is empty
-        this.expenses = [
-          {
-            id: `exp_${Date.now()}_1`,
-            title: "Premium Leather Sheets",
-            amount: 2500,
-            category: "Materials",
-            date: "2024-01-15",
-            notes: "Bulk purchase for January production",
-            createdAt: "2024-01-15T10:30:00Z",
-            updatedAt: "2024-01-15T10:30:00Z",
-          },
-          {
-            id: `exp_${Date.now()}_2`,
-            title: "Professional Stitching Needles",
-            amount: 800,
-            category: "Tools",
-            date: "2024-01-14",
-            notes: "Industrial grade needles for new machine",
-            createdAt: "2024-01-14T09:20:00Z",
-            updatedAt: "2024-01-14T09:20:00Z",
-          },
-        ];
-        this.saveExpenses();
-      }
-
-      if (storedEmployees) {
-        this.employees = JSON.parse(storedEmployees);
-      } else {
-        this.employees = [];
-        this.saveEmployees();
-      }
-    } catch (error) {
-      console.error("Error loading data from localStorage:", error);
-      // Fallback to empty arrays if localStorage is corrupted
-      this.expenses = [];
-      this.employees = [];
-    }
-  }
-
-  private saveExpenses() {
-    try {
-      localStorage.setItem(this.EXPENSES_KEY, JSON.stringify(this.expenses));
-    } catch (error) {
-      console.error("Error saving expenses to localStorage:", error);
-    }
-  }
-
-  private saveEmployees() {
-    try {
-      localStorage.setItem(this.EMPLOYEES_KEY, JSON.stringify(this.employees));
-    } catch (error) {
-      console.error("Error saving employees to localStorage:", error);
-    }
-  }
-
-  getExpenses(): Expense[] {
-    return [...this.expenses];
-  }
-
-  setExpenses(expenses: Expense[]): void {
-    this.expenses = [...expenses];
-    this.saveExpenses();
-  }
-
-  getEmployees(): Employee[] {
-    return [...this.employees];
-  }
-
-  setEmployees(employees: Employee[]): void {
-    this.employees = [...employees];
-    this.saveEmployees();
-  }
-
-  addExpense(expense: Expense): void {
-    this.expenses = [expense, ...this.expenses];
-    this.saveExpenses();
-  }
-
-  updateExpense(id: string, updatedExpense: Expense): void {
-    this.expenses = this.expenses.map((exp) =>
-      exp.id === id ? updatedExpense : exp
-    );
-    this.saveExpenses();
-  }
-
-  deleteExpense(id: string): void {
-    this.expenses = this.expenses.filter((exp) => exp.id !== id);
-    this.saveExpenses();
-  }
-
-  addEmployee(employee: Employee): void {
-    this.employees = [employee, ...this.employees];
-    this.saveEmployees();
-  }
-
-  updateEmployee(id: string, updatedEmployee: Employee): void {
-    this.employees = this.employees.map((emp) =>
-      emp.id === id ? updatedEmployee : emp
-    );
-    this.saveEmployees();
-  }
-
-  deleteEmployee(id: string): void {
-    this.employees = this.employees.filter((emp) => emp.id !== id);
-    this.saveEmployees();
-  }
-}
+// Utility function to convert File to base64 for display
+const fileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+};
 
 export default function ExpenseManagementSystem() {
-  const [storageManager] = useState(() => new StorageManager());
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [employees, setEmployees] = useState<Employee[]>([]);
+  // API integration
+  const { 
+    expenses, 
+    employees, 
+    stats, 
+    pagination,
+    loading, 
+    error, 
+    filters,
+    fetchExpenses, 
+    fetchEmployees, 
+    fetchStats,
+    refreshData,
+    setFilters 
+  } = useExpenseData();
+
+  // UI state
   const [showExpenseForm, setShowExpenseForm] = useState(false);
   const [showSalaryForm, setShowSalaryForm] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
@@ -217,10 +114,9 @@ export default function ExpenseManagementSystem() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("all");
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(
-    null
-  );
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<number | null>(null);
   const [showImageModal, setShowImageModal] = useState<Expense | null>(null);
+  const [billFile, setBillFile] = useState<File | null>(null);
 
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
@@ -256,6 +152,7 @@ export default function ExpenseManagementSystem() {
     amount: "",
     category: "",
     date: getTodayDate(),
+    description: "",
     notes: "",
     billImage: "",
     billFileName: "",
@@ -268,18 +165,30 @@ export default function ExpenseManagementSystem() {
     dateAdded: getTodayDate(),
   });
 
-  // Initialize data on component mount
+  // Handle filter changes and trigger API calls - DEBOUNCED to prevent infinite loops
   useEffect(() => {
-    const loadedExpenses = storageManager.getExpenses();
-    const loadedEmployees = storageManager.getEmployees();
+    const timeoutId = setTimeout(() => {
+      const newFilters = {
+        search: searchTerm || undefined,
+        month: selectedMonth !== "all" ? selectedMonth : undefined,
+        category: selectedCategory !== "all" ? selectedCategory : undefined,
+      };
+      
+      // Only update if filters actually changed
+      const currentFilterString = JSON.stringify(filters);
+      const newFilterString = JSON.stringify(newFilters);
+      
+      if (currentFilterString !== newFilterString) {
+        setFilters(newFilters);
+        fetchExpenses(newFilters);
+        fetchStats(newFilters);
+      }
+    }, 300); // 300ms debounce
 
-    setExpenses(loadedExpenses);
-    setEmployees(loadedEmployees);
-  }, [storageManager]);
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm, selectedMonth, selectedCategory]); // Removed setFilters, fetchExpenses, fetchStats from dependencies
 
-  const generateUniqueId = (prefix: string) => {
-    return `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  };
+  // Removed generateUniqueId - no longer needed with API integration
 
   const validateExpenseForm = () => {
     const errors = [];
@@ -289,6 +198,7 @@ export default function ExpenseManagementSystem() {
       errors.push("Amount must be a positive number");
     if (!expenseFormData.category) errors.push("Category is required");
     if (!expenseFormData.date) errors.push("Date is required");
+    if (!expenseFormData.description.trim()) errors.push("Description is required");
 
     return errors;
   };
@@ -312,7 +222,7 @@ export default function ExpenseManagementSystem() {
     return errors;
   };
 
-  const handleExpenseSubmit = (e: React.FormEvent) => {
+  const handleExpenseSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const validationErrors = validateExpenseForm();
@@ -322,74 +232,38 @@ export default function ExpenseManagementSystem() {
     }
 
     try {
-      const now = new Date().toISOString();
+      const expenseData: ExpenseCreateRequest = {
+        title: expenseFormData.title.trim(),
+        amount: parseFloat(expenseFormData.amount),
+        category: expenseFormData.category,
+        date: expenseFormData.date,
+        description: expenseFormData.description.trim(),
+        notes: expenseFormData.notes.trim() || undefined,
+        billFile: billFile || undefined,
+      };
 
       if (editingExpense) {
         // Update existing expense
-        const updatedExpense: Expense = {
-          ...editingExpense,
-          title: expenseFormData.title.trim(),
-          amount: parseFloat(expenseFormData.amount),
-          category: expenseFormData.category,
-          date: expenseFormData.date,
-          notes: expenseFormData.notes.trim(),
-          billImage: expenseFormData.billImage,
-          billFileName: expenseFormData.billFileName,
-          updatedAt: now,
-        };
-
-        storageManager.updateExpense(editingExpense.id, updatedExpense);
-
-        if (updatedExpense.category === "Salary" && updatedExpense.employeeId) {
-          const employeeToUpdate = employees.find(
-            (emp) => emp.id === updatedExpense.employeeId
-          );
-          if (employeeToUpdate) {
-            const updatedEmployee = {
-              ...employeeToUpdate,
-              monthlySalary: updatedExpense.amount,
-            };
-            storageManager.updateEmployee(updatedEmployee.id, updatedEmployee);
-            const updatedEmployees = storageManager.getEmployees();
-            setEmployees(updatedEmployees);
-          }
-        }
-
-        const updatedExpenses = storageManager.getExpenses();
-        setExpenses(updatedExpenses);
-
+        await expenseApiService.updateExpense(editingExpense.id, expenseData);
         toast.success("Expense updated successfully");
         setEditingExpense(null);
       } else {
         // Create new expense
-        const newExpense: Expense = {
-          id: generateUniqueId("exp"),
-          title: expenseFormData.title.trim(),
-          amount: parseFloat(expenseFormData.amount),
-          category: expenseFormData.category,
-          date: expenseFormData.date,
-          notes: expenseFormData.notes.trim(),
-          billImage: expenseFormData.billImage,
-          billFileName: expenseFormData.billFileName,
-          createdAt: now,
-          updatedAt: now,
-        };
-
-        storageManager.addExpense(newExpense);
-        const updatedExpenses = storageManager.getExpenses();
-        setExpenses(updatedExpenses);
-
+        await expenseApiService.createExpense(expenseData);
         toast.success("Expense added successfully");
       }
 
+      // Refresh data
+      refreshData();
       resetExpenseForm();
     } catch (error) {
-      toast.error("Failed to save expense. Please try again.");
+      const errorMessage = error instanceof Error ? error.message : "Failed to save expense";
+      toast.error(errorMessage);
       console.error("Error saving expense:", error);
     }
   };
 
-  const handleSalarySubmit = (e: React.FormEvent) => {
+  const handleSalarySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const validationErrors = validateSalaryForm();
@@ -399,41 +273,36 @@ export default function ExpenseManagementSystem() {
     }
 
     try {
-      const now = new Date().toISOString();
-
-      // Add employee
-      const newEmployee: Employee = {
-        id: generateUniqueId("emp"),
+      const employeeData: EmployeeCreateRequest = {
         name: salaryFormData.name.trim(),
         role: salaryFormData.role.trim(),
         monthlySalary: parseFloat(salaryFormData.monthlySalary),
         dateAdded: salaryFormData.dateAdded,
       };
 
-      storageManager.addEmployee(newEmployee);
-      const updatedEmployees = storageManager.getEmployees();
-      setEmployees(updatedEmployees);
+      // Create employee via API
+      const newEmployee = await expenseApiService.createEmployee(employeeData);
 
-      // Add corresponding salary expense
-      const salaryExpense: Expense = {
-        id: generateUniqueId("exp"),
+      // Create corresponding salary expense
+      const salaryExpenseData: ExpenseCreateRequest = {
         title: `Salary - ${newEmployee.name} (${newEmployee.role})`,
         amount: newEmployee.monthlySalary,
-        category: "Salary",
-        date: newEmployee.dateAdded,
-        notes: `Monthly salary for ${newEmployee.name}`,
-        createdAt: now,
-        updatedAt: now,
-        employeeId: newEmployee.id,
+        category: "Staff Salaries",
+        date: new Date(newEmployee.dateAdded).toISOString().split('T')[0], // Convert to YYYY-MM-DD format
+        description: `Monthly salary payment for ${newEmployee.name}`,
+        notes: `Employee ID: ${newEmployee.id}, Role: ${newEmployee.role}`,
       };
-      storageManager.addExpense(salaryExpense);
-      const updatedExpenses = storageManager.getExpenses();
-      setExpenses(updatedExpenses);
+
+      await expenseApiService.createExpense(salaryExpenseData);
 
       toast.success("Employee added and salary expense recorded");
+      
+      // Refresh data
+      refreshData();
       resetSalaryForm();
     } catch (error) {
-      toast.error("Failed to add employee. Please try again.");
+      const errorMessage = error instanceof Error ? error.message : "Failed to add employee";
+      toast.error(errorMessage);
       console.error("Error adding employee:", error);
     }
   };
@@ -444,10 +313,12 @@ export default function ExpenseManagementSystem() {
       amount: "",
       category: "",
       date: getTodayDate(),
+      description: "",
       notes: "",
       billImage: "",
       billFileName: "",
     });
+    setBillFile(null);
     setShowExpenseForm(false);
     setEditingExpense(null);
   };
@@ -468,32 +339,28 @@ export default function ExpenseManagementSystem() {
       amount: expense.amount.toString(),
       category: expense.category,
       date: expense.date,
+      description: expense.description || "",
       notes: expense.notes || "",
-      billImage: expense.billImage || "",
-      billFileName: expense.billFileName || "",
+      billImage: expense.billUrl || "",
+      billFileName: expense.billUrl ? expense.billUrl.split('/').pop() || "" : "",
     });
     setEditingExpense(expense);
     setShowExpenseForm(true);
   };
 
-  const handleDelete = (id: string, employeeId?: string) => {
+  const handleDelete = async (id: number) => {
     try {
-      if (employeeId) {
-        storageManager.deleteEmployee(employeeId);
-        const updatedEmployees = storageManager.getEmployees();
-        setEmployees(updatedEmployees);
-      }
-      storageManager.deleteExpense(id);
-      const updatedExpenses = storageManager.getExpenses();
-      setExpenses(updatedExpenses);
+      await expenseApiService.deleteExpense(id);
       toast.success("Expense deleted successfully");
+      refreshData();
     } catch (error) {
-      toast.error("Failed to delete expense. Please try again.");
+      const errorMessage = error instanceof Error ? error.message : "Failed to delete expense";
+      toast.error(errorMessage);
       console.error("Error deleting expense:", error);
     }
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
@@ -501,74 +368,56 @@ export default function ExpenseManagementSystem() {
         return;
       }
 
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const result = e.target?.result as string;
+      try {
+        setBillFile(file);
+        const base64 = await fileToBase64(file);
         setExpenseFormData({
           ...expenseFormData,
-          billImage: result,
+          billImage: base64,
           billFileName: file.name,
         });
-      };
-      reader.readAsDataURL(file);
+      } catch (error) {
+        toast.error("Failed to process file");
+        console.error("Error processing file:", error);
+      }
     }
   };
 
-  // Enhanced filtering
-  const filteredExpenses = expenses.filter((expense) => {
-    const matchesSearch =
-      expense.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      expense.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (expense.notes &&
-        expense.notes.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesMonth =
-      selectedMonth === "all" || expense.date.startsWith(selectedMonth);
-    const matchesCategory =
-      selectedCategory === "all" || expense.category === selectedCategory;
-    return matchesSearch && matchesMonth && matchesCategory;
-  });
+  // Use API-provided stats or calculate from filtered data
+  const monthlyTotal = stats?.monthlyTotal || 0;
+  const filteredEntries = stats?.filteredEntries || expenses.length;
+  const averageExpense = stats?.averageExpense || 0;
+  const categoryTotals = stats?.categoryBreakdown || [];
 
-  // Fixed calculations
-  const monthlyTotal = filteredExpenses.reduce(
-    (sum, expense) => sum + expense.amount,
-    0
-  );
-  const overallTotal = expenses.reduce(
-    (sum, expense) => sum + expense.amount,
-    0
-  );
-
-  const categoryTotals = expenseCategories
+  // Fallback calculations if no stats available
+  const fallbackMonthlyTotal = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+  const fallbackCategoryTotals = expenseCategories
     .map((category) => ({
       category,
-      amount: filteredExpenses
+      totalAmount: expenses
         .filter((expense) => expense.category === category)
         .reduce((sum, expense) => sum + expense.amount, 0),
-      count: filteredExpenses.filter((expense) => expense.category === category)
-        .length,
-      percentage:
-        filteredExpenses.length > 0
-          ? Math.round(
-              (filteredExpenses.filter(
-                (expense) => expense.category === category
-              ).length /
-                filteredExpenses.length) *
-                100
-            )
-          : 0,
+      entryCount: expenses.filter((expense) => expense.category === category).length,
+      percentage: expenses.length > 0
+        ? Math.round((expenses.filter((expense) => expense.category === category).length / expenses.length) * 100)
+        : 0,
     }))
-    .filter((item) => item.amount > 0);
+    .filter((item) => item.totalAmount > 0);
 
   const getCategoryColor = (category: string) => {
     const colors: { [key: string]: string } = {
-      Salary: "bg-indigo-500",
       Materials: "bg-blue-500",
       Tools: "bg-green-500",
       Rent: "bg-purple-500",
       Utilities: "bg-yellow-500",
+      Transportation: "bg-teal-500",
       Marketing: "bg-pink-500",
-      Travel: "bg-teal-500",
-      Others: "bg-gray-500",
+      "Staff Salaries": "bg-indigo-500",
+      "Office Supplies": "bg-orange-500",
+      Maintenance: "bg-red-500",
+      "Professional Services": "bg-cyan-500",
+      Insurance: "bg-violet-500",
+      Miscellaneous: "bg-gray-500",
     };
     return colors[category] || "bg-gray-500";
   };
@@ -580,18 +429,8 @@ export default function ExpenseManagementSystem() {
     const monthOptions = sortedMonths.map((month) => {
       const [year, monthNum] = month.split("-");
       const monthNames = [
-        "Jan",
-        "Feb",
-        "Mar",
-        "Apr",
-        "May",
-        "Jun",
-        "Jul",
-        "Aug",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Dec",
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
       ];
       return {
         value: month,
@@ -607,7 +446,8 @@ export default function ExpenseManagementSystem() {
     expenseFormData.amount &&
     parseFloat(expenseFormData.amount) > 0 &&
     expenseFormData.category &&
-    expenseFormData.date;
+    expenseFormData.date &&
+    expenseFormData.description.trim();
 
   const isSalaryFormValid =
     salaryFormData.name.trim() &&
@@ -655,7 +495,7 @@ export default function ExpenseManagementSystem() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900">
-                  ₹{monthlyTotal.toLocaleString("en-IN")}
+                  ₹{monthlyTotal.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
                 <div className="text-xs sm:text-sm text-slate-600 font-medium">
                   Monthly Total
@@ -671,12 +511,12 @@ export default function ExpenseManagementSystem() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900">
-                  {filteredExpenses.length}
+                  {filteredEntries}
                 </div>
                 <div className="text-xs sm:text-sm text-slate-600 font-medium">
                   Filtered Entries{" "}
-                  {expenses.length !== filteredExpenses.length &&
-                    `(of ${expenses.length})`}
+                  {pagination.total !== filteredEntries &&
+                    `(of ${pagination.total})`}
                 </div>
               </div>
               <div className="p-2 sm:p-3 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full">
@@ -689,12 +529,7 @@ export default function ExpenseManagementSystem() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900">
-                  ₹
-                  {filteredExpenses.length > 0
-                    ? Math.round(
-                        monthlyTotal / filteredExpenses.length
-                      ).toLocaleString("en-IN")
-                    : 0}
+                  ₹{averageExpense.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
                 <div className="text-xs sm:text-sm text-slate-600 font-medium">
                   Average Expense
@@ -730,7 +565,7 @@ export default function ExpenseManagementSystem() {
               Category Breakdown
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-              {categoryTotals.map((item) => (
+              {(categoryTotals.length > 0 ? categoryTotals : fallbackCategoryTotals).map((item) => (
                 <div
                   key={item.category}
                   className="bg-gradient-to-br from-slate-50 to-white p-3 sm:p-4 rounded-xl border border-slate-200"
@@ -747,10 +582,10 @@ export default function ExpenseManagementSystem() {
                   </div>
                   <div className="space-y-1">
                     <div className="text-lg sm:text-xl lg:text-2xl font-bold text-slate-900">
-                      ₹{item.amount.toLocaleString("en-IN")}
+                      ₹{(item.totalAmount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </div>
                     <div className="text-xs sm:text-sm text-slate-600">
-                      {item.count} entries ({item.percentage}%)
+                      {(item.entryCount || 0)} entries ({typeof item.percentage === "number" ? item.percentage.toFixed(2) : "0.00"}%)
                     </div>
                   </div>
                 </div>
@@ -946,6 +781,28 @@ export default function ExpenseManagementSystem() {
                       </Button>
                     </div>
                   )}
+                </div>
+
+                <div>
+                  <Label
+                    htmlFor="expenseDescription"
+                    className="text-slate-700 font-medium text-sm"
+                  >
+                    Description <span className="text-red-500">*</span>
+                  </Label>
+                  <Textarea
+                    id="expenseDescription"
+                    value={expenseFormData.description}
+                    onChange={(e) =>
+                      setExpenseFormData({
+                        ...expenseFormData,
+                        description: e.target.value,
+                      })
+                    }
+                    placeholder="Describe the expense..."
+                    rows={2}
+                    className="mt-1 border-slate-300 focus:border-blue-500 text-sm"
+                  />
                 </div>
 
                 <div>
@@ -1250,7 +1107,7 @@ export default function ExpenseManagementSystem() {
 
         {/* Main Content */}
         <div className="space-y-3 sm:space-y-4">
-          {filteredExpenses.length === 0 ? (
+          {expenses.length === 0 ? (
             <Card className="p-8 sm:p-12 bg-gradient-to-br from-white to-slate-50 border-0 shadow-lg text-center">
               <Receipt className="h-12 w-12 sm:h-16 sm:w-16 text-slate-300 mx-auto mb-3 sm:mb-4" />
               <h3 className="text-lg sm:text-xl font-semibold text-slate-600 mb-2">
@@ -1265,7 +1122,7 @@ export default function ExpenseManagementSystem() {
               </p>
             </Card>
           ) : (
-            filteredExpenses.map((expense) => (
+            expenses.map((expense) => (
               <Card
                 key={expense.id}
                 className="p-4 sm:p-6 bg-gradient-to-br from-white to-slate-50 border-0 shadow-lg hover:shadow-xl transition-all duration-300"
@@ -1290,12 +1147,17 @@ export default function ExpenseManagementSystem() {
                         </span>
                       </div>
                     </div>
-                    {expense.notes && (
-                      <p className="text-slate-600 mb-3 bg-slate-50 p-3 rounded-lg border-l-4 border-blue-200 text-sm sm:text-base">
-                        {expense.notes}
+                    {expense.description && (
+                      <p className="text-slate-600 mb-3 bg-blue-50 p-3 rounded-lg border-l-4 border-blue-200 text-sm sm:text-base">
+                        <strong>Description:</strong> {expense.description}
                       </p>
                     )}
-                    {expense.billImage && (
+                    {expense.notes && (
+                      <p className="text-slate-600 mb-3 bg-slate-50 p-3 rounded-lg border-l-4 border-slate-200 text-sm sm:text-base">
+                        <strong>Notes:</strong> {expense.notes}
+                      </p>
+                    )}
+                    {expense.billUrl && (
                       <div className="mb-3">
                         <div className="flex items-center gap-2 text-sm text-slate-600">
                           <Upload className="h-4 w-4" />
@@ -1328,7 +1190,7 @@ export default function ExpenseManagementSystem() {
                   </div>
                   <div className="lg:text-right lg:ml-6 flex flex-row lg:flex-col items-center lg:items-end justify-between lg:justify-start gap-4">
                     <div className="text-2xl sm:text-3xl font-bold text-slate-900">
-                      ₹{expense.amount.toLocaleString("en-IN")}
+                      ₹{expense.amount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </div>
                     <div className="flex gap-2">
                       <Button
@@ -1365,9 +1227,7 @@ export default function ExpenseManagementSystem() {
                           <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
                             <AlertDialogAction
-                              onClick={() =>
-                                handleDelete(expense.id, expense.employeeId)
-                              }
+                              onClick={() => handleDelete(expense.id)}
                               className="bg-red-600 hover:bg-red-700"
                             >
                               Delete
@@ -1402,7 +1262,7 @@ export default function ExpenseManagementSystem() {
                     {employee.role}
                   </p>
                   <p className="text-base sm:text-lg font-bold text-indigo-600">
-                    ₹{employee.monthlySalary.toLocaleString("en-IN")}/month
+                    ₹{employee.monthlySalary.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/month
                   </p>
                   <p className="text-xs text-slate-500 mt-2">
                     Added:{" "}
@@ -1423,7 +1283,7 @@ export default function ExpenseManagementSystem() {
             <p className="text-slate-300 text-sm sm:text-base">
               Total of{" "}
               <span className="font-bold text-white">
-                {filteredExpenses.length}
+                {filteredEntries}
               </span>{" "}
               expenses worth{" "}
               <span className="font-bold mr-2 text-white">
@@ -1431,13 +1291,22 @@ export default function ExpenseManagementSystem() {
               </span>
               across{" "}
               <span className="font-bold text-white">
-                {categoryTotals.length}
+                {categoryTotals.length || fallbackCategoryTotals.length}
               </span>{" "}
               categories
-              {expenses.length !== filteredExpenses.length && (
+              {pagination.total !== filteredEntries && (
                 <span className="block mt-1 text-xs sm:text-sm">
-                  (Filtered from {expenses.length} total expenses worth ₹
-                  {overallTotal.toLocaleString("en-IN")})
+                  (Filtered from {pagination.total} total expenses)
+                </span>
+              )}
+              {loading && (
+                <span className="block mt-1 text-xs text-blue-300">
+                  Loading latest data...
+                </span>
+              )}
+              {error && (
+                <span className="block mt-1 text-xs text-amber-300">
+                  API unavailable - showing cached data
                 </span>
               )}
             </p>

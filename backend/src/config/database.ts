@@ -371,6 +371,56 @@ export const createTables = async (): Promise<void> => {
         INDEX idx_inventory_item_id (inventory_item_id),
         INDEX idx_action (action),
         INDEX idx_updated_at (updated_at)
+      )`,
+      
+      // Stock alerts for dashboard low stock alerts - Added for DashboardModel support
+      `CREATE TABLE IF NOT EXISTS stock_alerts (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        item_name VARCHAR(255) NOT NULL,
+        units_in_stock INT NOT NULL DEFAULT 0,
+        min_stock_level INT NOT NULL DEFAULT 5,
+        alert_created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_item_name (item_name),
+        INDEX idx_units_in_stock (units_in_stock),
+        INDEX idx_min_stock_level (min_stock_level)
+      )`,
+      
+      // Employees table for expense management - Added for ExpenseModel support
+      `CREATE TABLE IF NOT EXISTS employees (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        name VARCHAR(255) NOT NULL,
+        role VARCHAR(255) NOT NULL,
+        monthly_salary DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+        date_added DATE NOT NULL,
+        is_active BOOLEAN NOT NULL DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_name (name),
+        INDEX idx_role (role),
+        INDEX idx_is_active (is_active),
+        INDEX idx_date_added (date_added)
+      )`,
+      
+      // Expenses table for expense tracking - Added for ExpenseModel support
+      `CREATE TABLE IF NOT EXISTS expenses (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        title VARCHAR(255) NOT NULL,
+        amount DECIMAL(10,2) NOT NULL,
+        category ENUM('Materials', 'Tools', 'Rent', 'Utilities', 'Transportation', 'Marketing', 'Staff Salaries', 'Office Supplies', 'Maintenance', 'Professional Services', 'Insurance', 'Miscellaneous') NOT NULL,
+        date DATE NOT NULL,
+        description TEXT NULL,
+        bill_url TEXT NULL,
+        notes TEXT NULL,
+        employee_id INT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE SET NULL,
+        INDEX idx_title (title),
+        INDEX idx_category (category),
+        INDEX idx_date (date),
+        INDEX idx_amount (amount),
+        INDEX idx_employee_id (employee_id)
       )`
     ];
     

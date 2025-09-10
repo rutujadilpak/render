@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
-import { Users, Calendar, Package, TrendingUp, ClipboardCheck } from "lucide-react";
+import { Users, Calendar, Package, TrendingUp, ClipboardCheck, AlertTriangle } from "lucide-react";
 import { enquiriesStorage, workflowHelpers } from "@/utils/localStorage";
+import { useDashboardData, DashboardData } from "@/services/dashboardApiService";
 
 const stats = [
   {
@@ -38,7 +39,8 @@ const stats = [
   },
 ];
 
-const recentActivity = [
+// Fallback data for local-only mode or when API is unavailable
+const fallbackRecentActivity = [
   {
     id: 1,
     type: "enquiry",
@@ -49,7 +51,7 @@ const recentActivity = [
   {
     id: 2,
     type: "pickup",
-    message: "Pickup scheduled for Ravi Kumar - 3 shoes",
+    message: "Pickup scheduled for Ravi Kumar - 3 shoes", 
     time: "15 minutes ago",
     status: "scheduled",
   },
@@ -75,49 +77,135 @@ interface DashboardOverviewProps {
 
 export function DashboardOverview({ onNavigate }: DashboardOverviewProps) {
   const [dynamicStats, setDynamicStats] = useState(stats);
+  const [recentActivity, setRecentActivity] = useState(fallbackRecentActivity);
+  const [lowStockAlerts, setLowStockAlerts] = useState<Array<{item: string; stock: number}>>([]);
+  const [useLocalStorage, setUseLocalStorage] = useState(false);
+
+  // Try to use API data first, fallback to localStorage if API fails
+  const { data: dashboardData, loading, error, refreshData } = useDashboardData();
 
   useEffect(() => {
-    // Calculate real-time stats from localStorage using new integrated workflow
-    const enquiries = enquiriesStorage.getAll();
-    const pickupEnquiries = workflowHelpers.getPickupEnquiries();
-    const serviceEnquiries = workflowHelpers.getServiceEnquiries();
-    const deliveryEnquiries = workflowHelpers.getDeliveryEnquiries();
-    
-    const pendingPickups = pickupEnquiries.filter(e => 
-      e.pickupDetails?.status === 'scheduled' || e.pickupDetails?.status === 'assigned'
-    ).length;
-    const inServiceItems = serviceEnquiries.filter(e => 
-      ['pending', 'in-progress', 'photos-taken', 'awaiting-approval'].includes(e.serviceDetails?.status || '')
-    ).length;
-    const completedServices = serviceEnquiries.filter(e => 
-      e.serviceDetails?.status === 'completed'
-    ).length;
-    const totalServices = serviceEnquiries.length;
-    
-    setDynamicStats([
-      {
-        ...stats[0],
-        value: enquiries.length.toString(),
-      },
-      {
-        ...stats[1],
-        value: pendingPickups.toString(),
-      },
-      {
-        ...stats[2],
-        value: inServiceItems.toString(),
-      },
-      {
-        ...stats[3],
-        value: `${completedServices}/${totalServices}`,
+    // Avoid unnecessary re-renders by checking if data actually changed
+    if (dashboardData && !error) {
+      // Use API data
+      setUseLocalStorage(false);
+      setDynamicStats([
+        {
+          ...stats[0],
+          value: dashboardData.totalEnquiries.toString(),
+        },
+        {
+          ...stats[1], 
+          value: dashboardData.pendingPickups.toString(),
+        },
+        {
+          ...stats[2],
+          value: dashboardData.inService.toString(),
+        },
+        {
+          ...stats[3],
+          value: dashboardData.completedDeliveredRatio,
+        }
+      ]);
+
+      // Transform API recent activity data
+      if (dashboardData.recentActivity) {
+        const transformedActivity = dashboardData.recentActivity.map((item, index) => ({
+          id: index + 1,
+          type: "activity",
+          message: item.text,
+          time: item.time,
+          status: "info",
+        }));
+        setRecentActivity(transformedActivity);
       }
-    ]);
-  }, []);
+
+      // Set low stock alerts
+      if (dashboardData.lowStockAlerts) {
+        setLowStockAlerts(dashboardData.lowStockAlerts);
+      }
+    } else if (error && !dashboardData) {
+      // Only fallback to localStorage when API completely fails and we have no data
+      console.warn('Dashboard API failed, using localStorage:', error);
+      setUseLocalStorage(true);
+      
+      // Calculate real-time stats from localStorage using new integrated workflow
+      const enquiries = enquiriesStorage.getAll();
+      const pickupEnquiries = workflowHelpers.getPickupEnquiries();
+      const serviceEnquiries = workflowHelpers.getServiceEnquiries();
+      
+      const pendingPickups = pickupEnquiries.filter(e => 
+        e.pickupDetails?.status === 'scheduled' || e.pickupDetails?.status === 'assigned'
+      ).length;
+      const inServiceItems = serviceEnquiries.filter(e => 
+        e.currentStage === 'service'
+      ).length;
+      const completedServices = serviceEnquiries.filter(e => 
+        e.currentStage === 'completed' || e.currentStage === 'delivery'
+      ).length;
+      const totalServices = serviceEnquiries.length;
+      
+      setDynamicStats([
+        {
+          ...stats[0],
+          value: enquiries.length.toString(),
+        },
+        {
+          ...stats[1],
+          value: pendingPickups.toString(),
+        },
+        {
+          ...stats[2],
+          value: inServiceItems.toString(),
+        },
+        {
+          ...stats[3],
+          value: `${completedServices}/${totalServices}`,
+        }
+      ]);
+
+      // Use fallback activity
+      setRecentActivity(fallbackRecentActivity);
+      
+      // Set fallback low stock alerts
+      setLowStockAlerts([
+        { item: 'Leather polish', stock: 2 },
+        { item: 'Sole adhesive', stock: 1 }
+      ]);
+    }
+  }, [dashboardData, error]); // Keep minimal dependencies
   return (
     <div className="space-y-4 sm:space-y-6 animate-fade-in p-2 sm:p-0">
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Dashboard</h1>
-        <p className="text-sm sm:text-base text-muted-foreground">Welcome back! Here's what's happening with your business.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Dashboard</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
+            Welcome back! Here's what's happening with your business.
+            {useLocalStorage && (
+              <span className="ml-2 text-xs text-amber-600">
+                (Using local data - API unavailable)
+              </span>
+            )}
+          </p>
+        </div>
+        
+        {/* API Status and Refresh */}
+        <div className="flex items-center gap-2">
+          {loading && (
+            <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          )}
+          {error && !useLocalStorage && (
+            <AlertTriangle className="w-4 h-4 text-amber-500" />
+          )}
+          {!loading && (
+            <button
+              onClick={refreshData}
+              className="text-xs px-2 py-1 bg-primary text-primary-foreground rounded hover:bg-primary/80 transition-colors"
+            >
+              Refresh
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Stats Grid */}
@@ -215,6 +303,29 @@ export function DashboardOverview({ onNavigate }: DashboardOverviewProps) {
             </button>
           </div>
         </Card>
+
+        {/* Low Stock Alerts */}
+        {lowStockAlerts.length > 0 && (
+          <Card className="p-4 sm:p-6 bg-gradient-card border-0 shadow-soft">
+            <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4 flex items-center">
+              <AlertTriangle className="h-5 w-5 mr-2 text-amber-500" />
+              Low Stock Alerts
+            </h3>
+            <div className="space-y-3 sm:space-y-4">
+              {lowStockAlerts.map((alert, index) => (
+                <div key={index} className="flex items-center justify-between p-2 sm:p-3 rounded-lg bg-amber-50 border border-amber-200">
+                  <div className="flex items-center space-x-3">
+                    <Package className="h-4 w-4 text-amber-600" />
+                    <span className="text-sm font-medium text-amber-800">{alert.item}</span>
+                  </div>
+                  <span className="text-sm font-bold text-amber-700">
+                    {alert.stock} left
+                  </span>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
       </div>
     </div>
   );
