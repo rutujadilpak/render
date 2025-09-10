@@ -1,19 +1,16 @@
 import mysql from 'mysql2/promise';
 import { logDatabase } from '../utils/logger';
 
-// Database configuration
+// Database configuration - removed invalid options
 const dbConfig = {
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '3306'),
   user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || 'zonixtech@111',
+  password: process.env.DB_PASSWORD || 'Sachin@2505',
   database: process.env.DB_NAME || 'cobbler_db',
   connectionLimit: parseInt(process.env.DB_CONNECTION_LIMIT || '10'),
-  acquireTimeout: 60000,
-  timeout: 60000,
-  reconnect: true,
   charset: 'utf8mb4',
-  collation: 'utf8mb4_unicode_ci'
+  // Removed invalid options: acquireTimeout, timeout, reconnect, collation
 };
 
 // Create connection pool
@@ -29,12 +26,7 @@ export const initializeDatabase = async (): Promise<void> => {
       port: dbConfig.port,
       user: dbConfig.user,
       password: dbConfig.password,
-      connectionLimit: dbConfig.connectionLimit,
-      acquireTimeout: dbConfig.acquireTimeout,
-      timeout: dbConfig.timeout,
-      reconnect: dbConfig.reconnect,
       charset: dbConfig.charset,
-      collation: dbConfig.collation
     };
     
     const tempPool = mysql.createPool(createDbConfig);
@@ -338,39 +330,36 @@ export const createTables = async (): Promise<void> => {
         INDEX idx_token (token)
       )`,
       
-      // Inventory management tables - Added for backend API integration
-      `CREATE TABLE IF NOT EXISTS inventory_items (
+      // Expenses table
+`CREATE TABLE IF NOT EXISTS expenses (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  title VARCHAR(255) NOT NULL,
+  amount DECIMAL(10,2) NOT NULL,
+  category ENUM('Materials','Tools','Rent','Utilities','Marketing','Others') NOT NULL,
+  date DATE NOT NULL,
+  description TEXT NULL,          -- << added
+  bill_url TEXT NULL,
+  notes TEXT NULL,
+  employee_id INT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_date (date),
+  INDEX idx_category (category)
+)`,
+      
+      // Employees table
+      `CREATE TABLE IF NOT EXISTS employees (
         id INT PRIMARY KEY AUTO_INCREMENT,
         name VARCHAR(255) NOT NULL,
-        category VARCHAR(255) NOT NULL,
-        quantity INT NOT NULL DEFAULT 0,
-        min_stock INT NOT NULL DEFAULT 5,
-        unit VARCHAR(50) NOT NULL,
-        purchase_price DECIMAL(10,2) NOT NULL,
-        selling_price DECIMAL(10,2) NOT NULL,
-        last_updated DATE NOT NULL,
-        last_updated_by VARCHAR(255) NULL,
+        role VARCHAR(100) NOT NULL,
+        monthly_salary DECIMAL(10,2) NOT NULL,
+        date_added DATE NOT NULL,
+        
+        is_active BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_name (name),
-        INDEX idx_category (category),
-        INDEX idx_quantity (quantity),
-        INDEX idx_min_stock (min_stock)
-      )`,
-      
-      // Inventory update history tracking - Added for backend API integration
-      `CREATE TABLE IF NOT EXISTS inventory_history (
-        id INT PRIMARY KEY AUTO_INCREMENT,
-        inventory_item_id INT NOT NULL,
-        action ENUM('Created', 'Updated') NOT NULL,
-        quantity_change INT NOT NULL,
-        new_quantity INT NOT NULL,
-        updated_by VARCHAR(255) NOT NULL,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (inventory_item_id) REFERENCES inventory_items(id) ON DELETE CASCADE,
-        INDEX idx_inventory_item_id (inventory_item_id),
-        INDEX idx_action (action),
-        INDEX idx_updated_at (updated_at)
+        INDEX idx_role (role)
       )`
     ];
     
