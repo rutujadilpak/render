@@ -5,6 +5,7 @@ import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 //import { apiLimiter } from "./middleware/rateLimiter";
 
 
@@ -182,6 +183,13 @@ app.use((error: any, req: express.Request, res: express.Response, next: express.
 // Initialize database and start server
 const startServer = async (): Promise<void> => {
   try {
+    // Create required directories
+    const requiredDirs = ['public/bills', 'logs'];
+    requiredDirs.forEach(dir => {
+      fs.mkdirSync(dir, { recursive: true });
+      console.log(`📁 Directory ensured: ${dir}`);
+    });
+    
     // Initialize database connection
     await initializeDatabase();
     logDatabase.connection('Database connection established successfully');

@@ -128,7 +128,12 @@ export class ExpenseController {
         notes: req.body.notes,
         employeeId: req.body.employeeId ? Number(req.body.employeeId) : null
       };
-      if (req.file) body.billUrl = `http://localhost:3001/bills/${req.file.filename}`;   // saved by multer
+      if (req.file) {
+        const baseUrl = process.env.NODE_ENV === 'production' 
+          ? process.env.BACKEND_URL || 'https://render-f67c.onrender.com'
+          : 'http://localhost:3001';
+        body.billUrl = `${baseUrl}/bills/${req.file.filename}`;
+      }
     } else {
       body = req.body;   // classic JSON call
     }
@@ -186,7 +191,12 @@ static async update(req: Request, res: Response): Promise<void> {
         employeeId  : req.body.employeeId  ? Number(req.body.employeeId)  : undefined
       };
       // new bill file supplied?
-      if (req.file) updates.billUrl = `https://render-f67c.onrender.com/bills/${req.file.filename}`;
+      if (req.file) {
+        const baseUrl = process.env.NODE_ENV === 'production' 
+          ? process.env.BACKEND_URL || 'https://render-f67c.onrender.com'
+          : 'http://localhost:3001';
+        updates.billUrl = `${baseUrl}/bills/${req.file.filename}`;
+      }
     } else {
       updates = req.body;   // classic JSON call
     }

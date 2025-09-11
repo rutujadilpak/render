@@ -1,9 +1,15 @@
 import multer from 'multer';
 import path from 'path';
+import fs from 'fs';
 import { v4 as uuid } from 'uuid';   // optional, for unique names
 
 const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, 'public/bills'),
+  destination: (_req, _file, cb) => {
+    const uploadDir = 'public/bills';
+    // Create directory if it doesn't exist (recursive: true is like mkdir -p)
+    fs.mkdirSync(uploadDir, { recursive: true });
+    cb(null, uploadDir);
+  },
   filename: (_req, file, cb) =>
     cb(null, `${uuid()}${path.extname(file.originalname)}`)
 });

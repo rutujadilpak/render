@@ -74,6 +74,7 @@ COPY --from=frontend-builder --chown=nodejs:nodejs /app/dist ./public
 
 # Create necessary directories
 RUN mkdir -p logs && chown nodejs:nodejs logs
+RUN mkdir -p public/bills && chown nodejs:nodejs public/bills
 RUN mkdir -p /var/lib/mysql && chown -R mysql:mysql /var/lib/mysql
 RUN mkdir -p /var/run/mysqld && chown -R mysql:mysql /var/run/mysqld
 

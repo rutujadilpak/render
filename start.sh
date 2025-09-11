@@ -84,6 +84,11 @@ echo "✅ Database setup complete!"
 echo "🔍 Testing database connection..."
 mysql -h $DB_HOST -P $DB_PORT -u $DB_USER -p$DB_PASSWORD -e "SELECT 1;" $DB_NAME 2>/dev/null && echo "✅ Database connection successful!" || echo "❌ Database connection failed!"
 
+# Create required directories
+echo "📁 Ensuring required directories exist..."
+mkdir -p public/bills logs
+chown -R nodejs:nodejs public/bills logs
+
 # Start the Node.js application
 echo "🚀 Starting Cobbler CRM application..."
 cd /app
