@@ -21,6 +21,7 @@ import completedRouter from './routes/completed';
 import expensesRouter from './routes/expenses';
 import inventoryRouter from './routes/inventory';
 import dashboardRouter from './routes/dashboard';
+import reportRoutes from './routes/report';
 
 // Load environment variables
 dotenv.config();
@@ -133,6 +134,7 @@ app.use('/api/completed', completedRouter);
 app.use('/api/expense', expensesRouter);
 app.use('/api/inventory', inventoryRouter);
 app.use('/api/dashboard', dashboardRouter);
+app.use('/api/reports', reportRoutes);
 
 
 // ALWAYS serve uploaded files

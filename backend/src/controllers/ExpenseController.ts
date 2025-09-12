@@ -509,3 +509,9 @@ static async update(req: Request, res: Response): Promise<void> {
     }
   }
 }
+
+// {
+//     "success": false,
+//     "error": "Failed to update expense",
+//     "message": "Incorrect date value: '2025-09-10T00:00:00.000Z' for column 'date' at row 1"
+// }

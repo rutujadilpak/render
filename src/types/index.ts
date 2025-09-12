@@ -540,3 +540,62 @@ export interface CompleteDeliveryRequest {
   customerSignature?: string;
   deliveryNotes?: string;
 }
+
+// Report-specific interfaces for backend/frontend communication
+export interface ReportMetrics {
+  totalRevenue: number;
+  totalOrders: number;
+  activeCustomers: number;
+  totalExpenditure: number;
+  netProfit: number;
+}
+
+export interface MonthlyRevenueData {
+  month: string;
+  revenue: number;
+  orders: number;
+}
+
+export interface ServiceDistributionData {
+  name: string;
+  value: number; // percentage
+  color: string;
+}
+
+export interface TopCustomerData {
+  name: string;
+  orders: number;
+  revenue: number;
+}
+
+export interface ProfitLossData {
+  date: string;
+  revenue: number;
+  expense: number;
+}
+
+export interface ReportFilters {
+  startDate: string;
+  endDate: string;
+  period: 'week' | 'month' | 'quarter' | 'year';
+}
+
+export interface ReportData {
+  metrics: ReportMetrics;
+  revenueChartData: MonthlyRevenueData[];
+  serviceDistribution: ServiceDistributionData[];
+  topCustomers: TopCustomerData[];
+  profitLossData: ProfitLossData[];
+}
+
+export interface ReportExportData extends ReportData {
+  expenseBreakdown: any[];
+  period: string;
+  dateRange: {
+    startDate: string;
+    endDate: string;
+  };
+  generatedAt: string;
+}
+
+export type ReportPeriod = 'week' | 'month' | 'quarter' | 'year';
