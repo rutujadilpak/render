@@ -31,6 +31,7 @@ import { Enquiry, PickupStatus, ServiceType } from "@/types";
 import { imageUploadHelper } from "@/utils/localStorage";
 import { usePickupEnquiries, usePickupStats } from "@/services/pickupApiService";
 import { useToast } from "@/hooks/use-toast";
+import { stringUtils } from "@/utils";
 
 export function PickupModule() {
   const { toast } = useToast();
@@ -342,7 +343,7 @@ export function PickupModule() {
                       enquiry.pickupDetails?.status || "scheduled"
                     )} text-xs self-start`}
                   >
-                    {enquiry.pickupDetails?.status || "scheduled"}
+                    {stringUtils.capitalizeWords(enquiry.pickupDetails?.status || "scheduled")}
                   </Badge>
                 </div>
 
@@ -447,7 +448,15 @@ export function PickupModule() {
                                 <img
                                   src={selectedImage}
                                   alt="Collection proof"
-                                  className="w-full h-32 object-cover rounded-md border"
+                                  className="w-full max-h-48 object-contain rounded-md border bg-gray-50"
+                                  loading="eager"
+                                  decoding="sync"
+                                  style={{ 
+                                    imageRendering: 'crisp-edges',
+                                    transform: 'translateZ(0)',
+                                    backfaceVisibility: 'hidden',
+                                    WebkitBackfaceVisibility: 'hidden'
+                                  } as React.CSSProperties}
                                 />
                               </div>
                             )}
@@ -509,7 +518,15 @@ export function PickupModule() {
                                 <img
                                   src={selectedImage}
                                   alt="Received item condition"
-                                  className="w-full h-32 object-cover rounded-md border"
+                                  className="w-full max-h-48 object-contain rounded-md border bg-gray-50"
+                                  loading="eager"
+                                  decoding="sync"
+                                  style={{ 
+                                    imageRendering: 'crisp-edges',
+                                    transform: 'translateZ(0)',
+                                    backfaceVisibility: 'hidden',
+                                    WebkitBackfaceVisibility: 'hidden'
+                                  } as React.CSSProperties}
                                 />
                               </div>
                             )}

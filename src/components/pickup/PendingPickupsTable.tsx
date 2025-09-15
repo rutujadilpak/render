@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Search, User, Clock } from "lucide-react";
+import { stringUtils } from "@/utils";
 
 interface PickupOrder {
   id: number;
@@ -121,7 +122,7 @@ export function PendingPickupsTable({ onBack }: PendingPickupsTableProps) {
              <div className="flex items-center justify-between">
                 <h3 className="font-semibold text-foreground text-lg">{pickup.customerName}</h3>
                 <Badge className={`${getStatusColor(pickup.status)} text-xs`}>
-                  {pickup.status}
+                  {stringUtils.capitalizeWords(pickup.status)}
                 </Badge>
               </div>
               <p className="text-sm text-muted-foreground">{pickup.customerPhone}</p>

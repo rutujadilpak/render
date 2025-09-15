@@ -657,10 +657,18 @@ export function ServiceModule() {
                     <div className="text-center">
                       <p className="text-xs text-muted-foreground mb-1">Before</p>
                       {enquiry.overallPhotos?.beforePhoto ? (
-                        <img 
+                        <img
                           src={enquiry.overallPhotos.beforePhoto} 
                           alt="Before service" 
-                          className="h-20 w-full object-cover rounded border"
+                          className="h-20 w-full object-contain rounded border bg-gray-50"
+                          loading="eager"
+                          decoding="sync"
+                          style={{ 
+                            imageRendering: 'crisp-edges',
+                            transform: 'translateZ(0)',
+                            backfaceVisibility: 'hidden',
+                            WebkitBackfaceVisibility: 'hidden'
+                          } as React.CSSProperties}
                         />
                       ) : (
                         <div className="h-20 bg-muted rounded flex items-center justify-center border">
@@ -672,10 +680,18 @@ export function ServiceModule() {
                     <div className="text-center">
                       <p className="text-xs text-muted-foreground mb-1">After</p>
                       {enquiry.overallPhotos?.afterPhoto ? (
-                        <img 
+                        <img
                           src={enquiry.overallPhotos.afterPhoto} 
                           alt="After service" 
-                          className="h-20 w-full object-cover rounded border"
+                          className="h-20 w-full object-contain rounded border bg-gray-50"
+                          loading="eager"
+                          decoding="sync"
+                          style={{ 
+                            imageRendering: 'crisp-edges',
+                            transform: 'translateZ(0)',
+                            backfaceVisibility: 'hidden',
+                            WebkitBackfaceVisibility: 'hidden'
+                          } as React.CSSProperties}
                         />
                       ) : (
                         <div className="h-20 bg-muted rounded flex items-center justify-center border"
@@ -827,7 +843,15 @@ export function ServiceModule() {
                             <img
                               src={overallBeforePhoto}
                               alt="Overall before photo"
-                              className="w-full h-32 object-cover rounded-md border"
+                              className="w-full max-h-48 object-contain rounded-md border bg-gray-50"
+                              loading="eager"
+                              decoding="sync"
+                              style={{ 
+                                imageRendering: 'crisp-edges',
+                                transform: 'translateZ(0)',
+                                backfaceVisibility: 'hidden',
+                                WebkitBackfaceVisibility: 'hidden'
+                              } as React.CSSProperties}
                             />
                           </div>
                         )}
@@ -894,7 +918,15 @@ export function ServiceModule() {
                             <img
                               src={overallAfterPhoto}
                               alt="Final after photo"
-                              className="w-full h-32 object-cover rounded-md border"
+                              className="w-full max-h-48 object-contain rounded-md border bg-gray-50"
+                              loading="eager"
+                              decoding="sync"
+                              style={{ 
+                                imageRendering: 'crisp-edges',
+                                transform: 'translateZ(0)',
+                                backfaceVisibility: 'hidden',
+                                WebkitBackfaceVisibility: 'hidden'
+                              } as React.CSSProperties}
                             />
                           </div>
                         )}

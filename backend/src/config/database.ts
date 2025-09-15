@@ -163,7 +163,7 @@ export const createTables = async (): Promise<void> => {
     const tables = [
       // Core Enquiry table
       `CREATE TABLE IF NOT EXISTS enquiries (
-        id INT PRIMARY KEY AUTO_INCREMENT,
+        id BIGINT PRIMARY KEY AUTO_INCREMENT,
         customer_name VARCHAR(255) NOT NULL,
         phone VARCHAR(20) NOT NULL,
         address TEXT NOT NULL,

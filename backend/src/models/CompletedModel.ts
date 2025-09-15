@@ -88,15 +88,15 @@ export class CompletedModel {
           
           -- Service details
           sd.work_notes as workNotes,
-          GROUP_CONCAT(DISTINCT st.service_type) as serviceTypes
+          (SELECT GROUP_CONCAT(DISTINCT st2.service_type) 
+           FROM service_types st2 
+           WHERE st2.enquiry_id = e.id) as serviceTypes
           
         FROM enquiries e
         LEFT JOIN billing_details bd ON e.id = bd.enquiry_id
         LEFT JOIN delivery_details dd ON e.id = dd.enquiry_id
         LEFT JOIN service_details sd ON e.id = sd.enquiry_id
-        LEFT JOIN service_types st ON e.id = st.enquiry_id
         WHERE e.current_stage = 'completed'
-        GROUP BY e.id
         ORDER BY dd.delivered_at DESC, e.updated_at DESC
       `;
       
@@ -214,15 +214,15 @@ export class CompletedModel {
           
           -- Service details
           sd.work_notes as workNotes,
-          GROUP_CONCAT(DISTINCT st.service_type) as serviceTypes
+          (SELECT GROUP_CONCAT(DISTINCT st2.service_type) 
+           FROM service_types st2 
+           WHERE st2.enquiry_id = e.id) as serviceTypes
           
         FROM enquiries e
         LEFT JOIN billing_details bd ON e.id = bd.enquiry_id
         LEFT JOIN delivery_details dd ON e.id = dd.enquiry_id
         LEFT JOIN service_details sd ON e.id = sd.enquiry_id
-        LEFT JOIN service_types st ON e.id = st.enquiry_id
         WHERE e.id = ? AND e.current_stage = 'completed'
-        GROUP BY e.id
       `;
       
       const results = await executeQuery<CompletedEnquiry>(query, [id]);
