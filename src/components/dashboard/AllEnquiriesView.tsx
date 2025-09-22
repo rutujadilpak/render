@@ -29,13 +29,12 @@ interface AllEnquiriesViewProps {
 // Helper: format date
 const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-    });
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${day}/${month}/${year} ${hours}:${minutes}`;
 };
 
 // Status colors
@@ -140,12 +139,10 @@ export function AllEnquiriesView({ onNavigate, onBack }: AllEnquiriesViewProps) 
                         className="flex items-center space-x-2 text-muted-foreground hover:text-foreground transition-colors"
                     >
                         <ArrowLeft className="h-5 w-5" />
-                        <span>Back to Dashboard</span>
                     </button>
                     <div className="h-6 w-px bg-border hidden sm:block"></div>
                     <div>
                         <h1 className="text-2xl sm:text-3xl font-bold text-foreground flex items-center">
-                            <Users className="h-8 w-8 mr-3 text-primary" />
                             All Enquiries
                         </h1>
                         <p className="text-sm sm:text-base text-muted-foreground">

@@ -881,16 +881,25 @@ export function SettingsModule() {
       )}
 
       <Tabs defaultValue="business" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="business" className="flex items-center space-x-2">
+        <TabsList className="grid w-full grid-cols-3 bg-slate-100 border border-slate-200">
+          <TabsTrigger 
+            value="business" 
+            className="flex items-center space-x-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-blue-700 data-[state=active]:font-semibold transition-all duration-200"
+          >
             <Settings className="h-4 w-4" />
             <span className="hidden sm:inline">Business</span>
           </TabsTrigger>
-          <TabsTrigger value="staff" className="flex items-center space-x-2">
+          <TabsTrigger 
+            value="staff" 
+            className="flex items-center space-x-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-blue-700 data-[state=active]:font-semibold transition-all duration-200"
+          >
             <User className="h-4 w-4" />
             <span className="hidden sm:inline">Staff</span>
           </TabsTrigger>
-          <TabsTrigger value="security" className="flex items-center space-x-2">
+          <TabsTrigger 
+            value="security" 
+            className="flex items-center space-x-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=active]:border-blue-700 data-[state=active]:font-semibold transition-all duration-200"
+          >
             <Shield className="h-4 w-4" />
             <span className="hidden sm:inline">Security</span>
           </TabsTrigger>

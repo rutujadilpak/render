@@ -51,6 +51,9 @@ import {
   FileUp,
   Wallet,
   Filter,
+  Eye,
+  Download,
+  Image as ImageIcon,
 } from "lucide-react";
 
 
@@ -88,6 +91,170 @@ const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
+// Utility function to get file type from URL or filename
+const getFileType = (url: string): 'image' | 'pdf' => {
+  const extension = url.split('.').pop()?.toLowerCase();
+  return extension === 'pdf' ? 'pdf' : 'image';
+};
+
+// Utility function to get filename from URL
+const getFilenameFromUrl = (url: string): string => {
+  return url.split('/').pop() || 'bill';
+};
+
+// Utility function to construct proper bill URL
+const getBillUrl = (billUrl: string): string => {
+  if (!billUrl) return '';
+  
+  // Extract filename from the URL
+  const filename = billUrl.split('/').pop();
+  if (!filename) return '';
+  
+  // Use the API endpoint to serve bill files
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (
+    typeof window !== 'undefined' && window.location.origin !== 'http://localhost:5173'
+      ? `${window.location.origin}/api`
+      : 'http://localhost:3001/api'
+  );
+  
+  // Use the API endpoint for serving bill files
+  const constructedUrl = `${API_BASE_URL}/expense/bill/${filename}`;
+  
+  // Debug logging
+  console.log('Bill URL Debug:', {
+    original: billUrl,
+    filename,
+    constructed: constructedUrl
+  });
+  
+  return constructedUrl;
+};
+
+// Utility function to download file
+const downloadFile = async (url: string, filename: string) => {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error('Failed to fetch file');
+    }
+    
+    const blob = await response.blob();
+    const downloadUrl = window.URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    
+    // Cleanup
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(downloadUrl);
+  } catch (error) {
+    console.error('Download failed:', error);
+    // Fallback to opening in new tab
+    window.open(url, '_blank');
+  }
+};
+
+// Bill Preview Component
+const BillPreview = ({ 
+  url, 
+  filename, 
+  type, 
+  onClose 
+}: { 
+  url: string; 
+  filename: string; 
+  type: 'image' | 'pdf'; 
+  onClose: () => void; 
+}) => {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg max-w-4xl max-h-[90vh] w-full overflow-hidden">
+        <div className="flex items-center justify-between p-4 border-b">
+          <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            {filename}
+          </h3>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => downloadFile(url, filename)}
+              className="flex items-center gap-2"
+            >
+              <Download className="h-4 w-4" />
+              Download
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClose}
+              className="text-slate-600 hover:text-slate-900"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        <div className="p-4 overflow-auto max-h-[calc(90vh-80px)]">
+          {type === 'image' ? (
+            <img
+              src={url}
+              alt={filename}
+              className="max-w-full h-auto rounded-lg shadow-lg"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+                target.nextElementSibling?.classList.remove('hidden');
+              }}
+            />
+          ) : (
+            <iframe
+              src={url}
+              className="w-full h-[600px] border-0 rounded-lg"
+              title={filename}
+            />
+          )}
+          <div className="hidden text-center text-slate-500 mt-8">
+            <ImageIcon className="h-12 w-12 mx-auto mb-2 text-slate-400" />
+            <p>Unable to load preview</p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => downloadFile(url, filename)}
+              className="mt-2"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Download to view
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Utility function to format date to dd/mm/yyyy format
+const formatDate = (dateString: string): string => {
+  const date = new Date(dateString);
+  const day = date.getDate().toString().padStart(2, '0');
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
+};
+
+// Utility function to format date and time to dd/mm/yyyy, hh:mm format
+const formatDateTime = (dateString: string): string => {
+  const date = new Date(dateString);
+  const day = date.getDate().toString().padStart(2, '0');
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const year = date.getFullYear();
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  return `${day}/${month}/${year}, ${hours}:${minutes}`;
+};
+
 export default function ExpenseManagementSystem() {
   // API integration
   const {
@@ -115,6 +282,7 @@ export default function ExpenseManagementSystem() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<number | null>(null);
   const [billFile, setBillFile] = useState<File | null>(null);
+  const [showBillPreview, setShowBillPreview] = useState<{ url: string; filename: string; type: 'image' | 'pdf' } | null>(null);
 
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
@@ -171,6 +339,13 @@ export default function ExpenseManagementSystem() {
         month: selectedMonth !== "all" ? selectedMonth : undefined,
         category: selectedCategory !== "all" ? selectedCategory : undefined,
       };
+
+      // Debug logging for filters
+      console.log('Filter Debug:', {
+        selectedMonth,
+        newFilters,
+        currentFilters: filters
+      });
 
       // Only update if filters actually changed
       const currentFilterString = JSON.stringify(filters);
@@ -294,7 +469,7 @@ export default function ExpenseManagementSystem() {
           category: "Staff Salaries",
           date: new Date(newEmployee.dateAdded).toISOString().split('T')[0], // Convert to YYYY-MM-DD format
           description: `Monthly salary payment for ${newEmployee.name}`,
-          notes: `Employee ID: ${newEmployee.id}, Role: ${newEmployee.role}`,
+          notes: `Role: ${newEmployee.role}`,
         };
 
         await expenseApiService.createExpense(salaryExpenseData);
@@ -399,6 +574,12 @@ export default function ExpenseManagementSystem() {
     }
   };
 
+  const handleBillPreview = (billUrl: string, filename: string) => {
+    const properUrl = getBillUrl(billUrl);
+    const type = getFileType(properUrl);
+    setShowBillPreview({ url: properUrl, filename, type });
+  };
+
   // Use API-provided stats or calculate from filtered data
   const monthlyTotal = stats?.monthlyTotal || 0;
   const filteredEntries = stats?.filteredEntries || expenses.length;
@@ -473,90 +654,84 @@ export default function ExpenseManagementSystem() {
     salaryFormData.dateAdded;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-3 sm:p-6">
-      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-2 sm:p-4 md:p-6">
+      <div className="max-w-7xl mx-auto space-y-3 sm:space-y-4 md:space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl lg:text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+        <div className="flex flex-col gap-4">
+          <div className="text-center sm:text-left">
+            <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent leading-tight">
               Expense Management System
             </h1>
             <p className="text-slate-600 mt-1 sm:mt-2 text-sm sm:text-base">
               Comprehensive expense tracking and management
             </p>
           </div>
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+          <div className="flex flex-row gap-2 sm:gap-3 w-full sm:w-auto">
             <Button
               onClick={() => setShowSalaryForm(!showSalaryForm)}
-              className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-sm sm:text-base"
+              className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-sm sm:text-base flex-1 sm:flex-none"
               size="sm"
             >
               <Plus className="h-4 w-4" />
-              Add Employee
+              <span className="hidden xs:inline">Add Employee</span>
+              <span className="xs:hidden">Add Employee</span>
             </Button>
             <Button
               onClick={() => setShowExpenseForm(!showExpenseForm)}
-              className="bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-sm sm:text-base"
+              className="bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-sm sm:text-base flex-1 sm:flex-none"
               size="sm"
             >
-              <Plus className="h-4 w-4 " />
-              {editingExpense ? "Update Expense" : "Add Expense"}
+              <Plus className="h-4 w-4" />
+              <span className="hidden xs:inline">{editingExpense ? "Update Expense" : "Add Expense"}</span>
+              <span className="xs:hidden">{editingExpense ? "Update" : "Add Expense"}</span>
             </Button>
           </div>
         </div>
 
         {/* Stats Dashboard */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <Card className="p-3 sm:p-4 bg-white border border-gray-200 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">
-                  ₹{Math.round(monthlyTotal).toLocaleString("en-IN")}
-                </div>
-                <div className="text-xs sm:text-sm text-gray-600">
-                  Monthly Total
-                </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
+          <Card className="p-2 sm:p-3 md:p-4 bg-white border border-gray-200 shadow-sm">
+            <div className="text-center">
+              <div className="text-sm sm:text-lg md:text-2xl font-bold text-gray-900">
+                ₹{Math.round(monthlyTotal).toLocaleString("en-IN")}
+              </div>
+              <div className="text-xs sm:text-sm text-gray-600 mt-1">
+                Monthly Total
               </div>
             </div>
           </Card>
 
-          <Card className="p-3 sm:p-4 bg-white border border-gray-200 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">
-                  {filteredEntries}
-                </div>
-                <div className="text-xs sm:text-sm text-gray-600">
-                  Filtered Entries{" "}
-                  {pagination.total !== filteredEntries &&
-                    `(of ${pagination.total})`}
-                </div>
+          <Card className="p-2 sm:p-3 md:p-4 bg-white border border-gray-200 shadow-sm">
+            <div className="text-center">
+              <div className="text-sm sm:text-lg md:text-2xl font-bold text-gray-900">
+                {filteredEntries}
+              </div>
+              <div className="text-xs sm:text-sm text-gray-600 mt-1">
+                Filtered Entries{" "}
+                {pagination.total !== filteredEntries &&
+                  `(of ${pagination.total})`}
               </div>
             </div>
           </Card>
 
-          <Card className="p-3 sm:p-4 bg-white border border-gray-200 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">
-                  ₹{Math.round(averageExpense).toLocaleString("en-IN")}
-                </div>
-                <div className="text-xs sm:text-sm text-gray-600">
-                  Average Expense
-                </div>
+          <Card className="p-2 sm:p-3 md:p-4 bg-white border border-gray-200 shadow-sm">
+            <div className="text-center">
+              <div className="text-sm sm:text-lg md:text-2xl font-bold text-gray-900">
+                ₹{Math.round(averageExpense).toLocaleString("en-IN")}
+              </div>
+              <div className="text-xs sm:text-sm text-gray-600 mt-1">
+                Average Expense
               </div>
             </div>
           </Card>
 
-          <Card className="p-3 sm:p-4 bg-white border border-gray-200 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-lg sm:text-2xl font-bold text-gray-900">
-                  {categoryTotals.length}
-                </div>
-                <div className="text-xs sm:text-sm text-gray-600">
-                  Categories
-                </div>
+          <Card className="p-2 sm:p-3 md:p-4 bg-white border border-gray-200 shadow-sm">
+            <div className="text-center">
+              <div className="text-sm sm:text-lg md:text-2xl font-bold text-gray-900">
+                {categoryTotals.length}
+              </div>
+              <div className="text-xs sm:text-sm text-gray-600 mt-1">
+                Categories
               </div>
             </div>
           </Card>
@@ -564,32 +739,32 @@ export default function ExpenseManagementSystem() {
 
         {/* Category Breakdown */}
         {categoryTotals.length > 0 && (
-          <Card className="p-4 sm:p-6 bg-white border border-gray-200 shadow-sm">
-            <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">
+          <Card className="p-3 sm:p-4 md:p-6 bg-white border border-gray-200 shadow-sm">
+            <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6">
               Category Breakdown
             </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
               {(categoryTotals.length > 0 ? categoryTotals : fallbackCategoryTotals).map((item) => (
                 <div
                   key={item.category}
-                  className="bg-gray-50 p-3 sm:p-4 rounded-lg border border-gray-200"
+                  className="bg-gray-50 p-2 sm:p-3 md:p-4 rounded-lg border border-gray-200"
                 >
-                  <div className="flex items-center space-x-2 sm:space-x-3 mb-2 sm:mb-3">
+                  <div className="flex items-center space-x-2 mb-2 sm:mb-3">
                     <div
                       className={`w-3 h-3 sm:w-4 sm:h-4 rounded-full ${getCategoryColor(
                         item.category
                       )}`}
                     />
-                    <span className="font-semibold text-gray-700 text-sm sm:text-base">
+                    <span className="font-semibold text-gray-700 text-xs sm:text-sm md:text-base truncate">
                       {item.category}
                     </span>
                   </div>
                   <div className="space-y-1">
-                    <div className="text-lg sm:text-xl font-bold text-gray-900">
+                    <div className="text-sm sm:text-lg md:text-xl font-bold text-gray-900">
                       ₹{Math.round(item.totalAmount || 0).toLocaleString("en-IN")}
                     </div>
                     <div className="text-xs sm:text-sm text-gray-600">
-                      {(item.entryCount || 0)} entries ({typeof item.percentage === "number" ? item.percentage.toFixed(2) : "0.00"}%)
+                      {(item.entryCount || 0)} entries
                     </div>
                   </div>
                 </div>
@@ -601,19 +776,19 @@ export default function ExpenseManagementSystem() {
         {/* Expense Form */}
         {showExpenseForm && (
           <div ref={expenseFormRef}>
-            <Card className="p-4 sm:p-6 bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-200 shadow-lg">
-              <h3 className="text-lg sm:text-xl font-bold text-slate-900 mb-4 flex items-center">
-                <Plus className="h-5 w-5 mr-2 text-blue-600" />
+            <Card className="p-3 sm:p-4 md:p-6 bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-200 shadow-lg">
+              <h3 className="text-base sm:text-lg md:text-xl font-bold text-slate-900 mb-3 sm:mb-4 flex items-center">
+                <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-blue-600" />
                 {editingExpense ? "Update Expense" : "Add New Expense"}
               </h3>
-              <form onSubmit={handleExpenseSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <form onSubmit={handleExpenseSubmit} className="space-y-3 sm:space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
                     <Label
                       htmlFor="expenseTitle"
                       className="text-slate-700 font-medium text-sm"
                     >
-                      Expense Title <span className="text-red-500">*</span>
+                      Expense Title <span className="text-gray-600">*</span>
                     </Label>
                     <Input
                       id="expenseTitle"
@@ -638,7 +813,7 @@ export default function ExpenseManagementSystem() {
                       htmlFor="expenseAmount"
                       className="text-slate-700 font-medium text-sm"
                     >
-                      Amount (₹) <span className="text-red-500">*</span>
+                      Amount (₹) <span className="text-gray-600">*</span>
                     </Label>
                     <Input
                       id="expenseAmount"
@@ -666,13 +841,13 @@ export default function ExpenseManagementSystem() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
                     <Label
                       htmlFor="expenseCategory"
                       className="text-slate-700 font-medium text-sm"
                     >
-                      Category <span className="text-red-500">*</span>
+                      Category <span className="text-gray-600">*</span>
                     </Label>
                     <Select
                       value={expenseFormData.category}
@@ -700,7 +875,7 @@ export default function ExpenseManagementSystem() {
                       htmlFor="expenseDate"
                       className="text-slate-700 font-medium text-sm"
                     >
-                      Date <span className="text-red-500">*</span>
+                      Date <span className="text-gray-600">*</span>
                     </Label>
                     <Input
                       id="expenseDate"
@@ -761,28 +936,43 @@ export default function ExpenseManagementSystem() {
                     />
                   </div>
                   {expenseFormData.billFileName && (
-                    <div className="mt-2 flex items-center justify-between bg-slate-100 p-2 rounded-md">
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-5 w-5 text-slate-600" />
-                        <span className="text-sm text-slate-800 font-medium truncate">
-                          {expenseFormData.billFileName}
-                        </span>
+                    <div className="mt-2 space-y-2">
+                      <div className="flex items-center justify-between bg-slate-100 p-2 rounded-md">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-5 w-5 text-slate-600" />
+                          <span className="text-sm text-slate-800 font-medium truncate">
+                            {expenseFormData.billFileName}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleBillPreview(expenseFormData.billImage, expenseFormData.billFileName)}
+                            className="text-blue-600 hover:bg-blue-100 h-7 w-7"
+                            title="Preview"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() =>
+                              setExpenseFormData({
+                                ...expenseFormData,
+                                billImage: "",
+                                billFileName: "",
+                              })
+                            }
+                            className="text-red-600 hover:bg-red-100 h-7 w-7"
+                            title="Remove"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() =>
-                          setExpenseFormData({
-                            ...expenseFormData,
-                            billImage: "",
-                            billFileName: "",
-                          })
-                        }
-                        className="text-red-600 hover:bg-red-100 h-7 w-7"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
                     </div>
                   )}
                 </div>
@@ -792,7 +982,7 @@ export default function ExpenseManagementSystem() {
                     htmlFor="expenseDescription"
                     className="text-slate-700 font-medium text-sm"
                   >
-                    Description <span className="text-red-500">*</span>
+                    Description <span className="text-gray-600">*</span>
                   </Label>
                   <Textarea
                     id="expenseDescription"
@@ -845,7 +1035,7 @@ export default function ExpenseManagementSystem() {
                     type="button"
                     variant="outline"
                     onClick={resetExpenseForm}
-                    className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 text-xs sm:text-sm"
+                    className="w-24 h-10 bg-red-500 text-white hover:bg-red-600 hover:text-white font-medium"
                     size="sm"
                   >
                     Cancel
@@ -859,19 +1049,19 @@ export default function ExpenseManagementSystem() {
         {/* Salary Form */}
         {showSalaryForm && (
           <div ref={salaryFormRef}>
-            <Card className="p-4 sm:p-6 bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 shadow-lg">
-              <h3 className="text-lg sm:text-xl font-bold text-slate-900 mb-4 flex items-center">
-                <Plus className="h-5 w-5 mr-2 text-indigo-600" />
+            <Card className="p-3 sm:p-4 md:p-6 bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 shadow-lg">
+              <h3 className="text-base sm:text-lg md:text-xl font-bold text-slate-900 mb-3 sm:mb-4 flex items-center">
+                <Plus className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-indigo-600" />
                 {editingEmployee ? "Update Employee" : "Add New Employee"}
               </h3>
-              <form onSubmit={handleSalarySubmit} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <form onSubmit={handleSalarySubmit} className="space-y-3 sm:space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
                     <Label
                       htmlFor="employeeName"
                       className="text-slate-700 font-medium text-sm"
                     >
-                      Employee Name <span className="text-red-500">*</span>
+                      Employee Name <span className="text-gray-600">*</span>
                     </Label>
                     <Input
                       id="employeeName"
@@ -893,7 +1083,7 @@ export default function ExpenseManagementSystem() {
                       htmlFor="employeeRole"
                       className="text-slate-700 font-medium text-sm"
                     >
-                      Role <span className="text-red-500">*</span>
+                      Role <span className="text-gray-600">*</span>
                     </Label>
                     <Input
                       id="employeeRole"
@@ -913,13 +1103,13 @@ export default function ExpenseManagementSystem() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div>
                     <Label
                       htmlFor="monthlySalary"
                       className="text-slate-700 font-medium text-sm"
                     >
-                      Monthly Salary (₹) <span className="text-red-500">*</span>
+                      Monthly Salary (₹) <span className="text-gray-600">*</span>
                     </Label>
                     <Input
                       id="monthlySalary"
@@ -946,7 +1136,7 @@ export default function ExpenseManagementSystem() {
                       htmlFor="dateAdded"
                       className="text-slate-700 font-medium text-sm"
                     >
-                      Date Added <span className="text-red-500">*</span>
+                      Date Added <span className="text-gray-600">*</span>
                     </Label>
                     <Input
                       id="dateAdded"
@@ -978,7 +1168,7 @@ export default function ExpenseManagementSystem() {
                     type="button"
                     variant="outline"
                     onClick={resetSalaryForm}
-                    className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 text-xs sm:text-sm"
+                    className="w-24 h-10 bg-red-500 text-white hover:bg-red-600 hover:text-white font-medium"
                     size="sm"
                   >
                     Cancel
@@ -990,9 +1180,9 @@ export default function ExpenseManagementSystem() {
         )}
 
         {/* Filters */}
-        <Card className="p-4 sm:p-6 bg-gradient-to-br from-white to-slate-50 border-0 shadow-lg">
+        <Card className="p-3 sm:p-4 md:p-6 bg-gradient-to-br from-white to-slate-50 border-0 shadow-lg">
           {/* Mobile Filter Toggle */}
-          <div className="sm:hidden mb-4">
+          <div className="sm:hidden mb-3">
             <Button
               variant="outline"
               onClick={() => setShowMobileFilters(!showMobileFilters)}
@@ -1004,19 +1194,19 @@ export default function ExpenseManagementSystem() {
           </div>
 
           <div className={`${showMobileFilters ? "block" : "hidden"} sm:block`}>
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-              <div className="relative flex-1 w-full">
+            <div className="flex flex-col gap-3 sm:gap-4">
+              <div className="relative w-full">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4 sm:h-5 sm:w-5" />
                 <Input
-                  placeholder="Search expenses..."
+                  placeholder="Search Expenses"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-8 sm:pl-10 border-slate-300 focus:border-blue-500 text-sm sm:text-base"
                 />
               </div>
-              <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 w-full sm:w-auto">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
                 <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                  <SelectTrigger className="w-full sm:w-28 border-slate-300 focus:border-blue-500">
+                  <SelectTrigger className="w-full border-slate-300 focus:border-blue-500">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1031,7 +1221,7 @@ export default function ExpenseManagementSystem() {
                   value={selectedCategory}
                   onValueChange={setSelectedCategory}
                 >
-                  <SelectTrigger className="w-full sm:w-32 border-slate-300 focus:border-blue-500">
+                  <SelectTrigger className="w-full border-slate-300 focus:border-blue-500">
                     <SelectValue placeholder="All Categories" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1052,8 +1242,8 @@ export default function ExpenseManagementSystem() {
         {/* Main Content */}
         <div className="space-y-3 sm:space-y-4">
           {expenses.length === 0 ? (
-            <Card className="p-8 sm:p-12 bg-gradient-to-br from-white to-slate-50 border-0 shadow-lg text-center">
-              <h3 className="text-lg sm:text-xl font-semibold text-slate-600 mb-2">
+            <Card className="p-6 sm:p-8 md:p-12 bg-gradient-to-br from-white to-slate-50 border-0 shadow-lg text-center">
+              <h3 className="text-base sm:text-lg md:text-xl font-semibold text-slate-600 mb-2">
                 {expenses.length === 0
                   ? "No expenses added yet"
                   : "No expenses match your filters"}
@@ -1068,70 +1258,111 @@ export default function ExpenseManagementSystem() {
             expenses.map((expense) => (
               <Card
                 key={expense.id}
-                className="p-4 sm:p-6 bg-gradient-to-br from-white to-slate-50 border-0 shadow-lg hover:shadow-xl transition-all duration-300"
+                className="p-3 sm:p-4 md:p-6 bg-gradient-to-br from-white to-slate-50 border-0 shadow-lg hover:shadow-xl transition-all duration-300"
               >
-                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                <div className="flex flex-col gap-3 sm:gap-4">
                   <div className="flex-1">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-3">
-                      <h3 className="text-lg sm:text-xl font-bold text-slate-900">
+                    <div className="flex justify-between items-start mb-3">
+                      <h3 className="text-base sm:text-lg md:text-xl font-bold text-slate-900 flex-1 pr-2">
                         {expense.title}
                       </h3>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge
-                          variant="outline"
-                          className={`${getCategoryColor(
-                            expense.category
-                          )} text-white border-0 px-2 sm:px-3 py-1 text-xs sm:text-sm`}
-                        >
-                          {expense.category}
-                        </Badge>
-                      </div>
+                      <Badge
+                        variant="outline"
+                        className={`${getCategoryColor(
+                          expense.category
+                        )} text-white border-0 px-2 sm:px-3 py-1 text-xs sm:text-sm flex-shrink-0`}
+                      >
+                        {expense.category}
+                      </Badge>
                     </div>
-                    {expense.description && (
-                      <p className="text-slate-600 mb-3 bg-blue-50 p-3 rounded-lg border-l-4 border-blue-200 text-sm sm:text-base">
-                        <strong>Description:</strong> {expense.description}
-                      </p>
-                    )}
-                    {expense.notes && (
-                      <p className="text-slate-600 mb-3 bg-slate-50 p-3 rounded-lg border-l-4 border-slate-200 text-sm sm:text-base">
-                        <strong>Notes:</strong> {expense.notes}
-                      </p>
-                    )}
-                    <div className="text-xs text-slate-600">
-                      Created:{" "}
-                      {new Date(expense.createdAt).toLocaleString("en-IN")}
+                    <div className="space-y-4">
+                      {expense.description && (
+                        <div className="text-slate-600 text-sm sm:text-base">
+                          <span className="font-semibold text-slate-700">Description:</span>
+                          <div className="mt-2 text-slate-600">
+                            {expense.description}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {expense.notes && (
+                        <div className="text-slate-600 text-sm sm:text-base">
+                          <span className="font-semibold text-slate-700">Notes:</span>
+                          <div className="mt-2 text-slate-600">
+                            {expense.notes}
+                          </div>
+                        </div>
+                      )}
+                      
+                       {expense.billUrl && (
+                         <div className="text-slate-600 text-sm sm:text-base">
+                           <span className="font-semibold text-slate-700 flex items-center gap-2">
+                             <FileText className="h-4 w-4" />
+                             Bill Attachment:
+                           </span>
+                           <div className="mt-2 flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                             <div className="flex flex-row gap-2">
+                               <Button
+                                 variant="outline"
+                                 size="sm"
+                                 onClick={() => handleBillPreview(expense.billUrl!, getFilenameFromUrl(expense.billUrl!))}
+                                 className="flex items-center gap-2 text-blue-600 border-blue-200 hover:bg-blue-100"
+                               >
+                                 <Eye className="h-4 w-4" />
+                                 View Bill
+                               </Button>
+                               <Button
+                                 variant="ghost"
+                                 size="sm"
+                                 onClick={() => downloadFile(getBillUrl(expense.billUrl!), getFilenameFromUrl(expense.billUrl!))}
+                                 className="flex items-center gap-2 text-slate-600 hover:bg-slate-100"
+                               >
+                                 <Download className="h-4 w-4" />
+                                 Download
+                               </Button>
+                             </div>
+                             <span className="text-xs text-slate-500">
+                               {getFilenameFromUrl(expense.billUrl!)}
+                             </span>
+                           </div>
+                         </div>
+                       )}
+                    </div>
+                    <div className="text-xs text-slate-600 font-bold space-y-1 mt-4 pt-3 border-t border-slate-200">
+                      <div>
+                        Created:{" "}
+                        {formatDateTime(expense.createdAt)}
+                      </div>
                       {expense.updatedAt !== expense.createdAt && (
-                        <span>
-                          {" "}
-                          • Updated:{" "}
-                          {new Date(expense.updatedAt).toLocaleString("en-IN")}
-                        </span>
+                        <div>
+                          Updated:{" "}
+                          {formatDateTime(expense.updatedAt)}
+                        </div>
                       )}
                     </div>
                   </div>
-                  <div className="lg:text-right lg:ml-6 flex flex-row lg:flex-col items-center lg:items-end justify-between lg:justify-start gap-4">
-                    <div className="text-2xl sm:text-3xl font-bold text-slate-900">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+                    <div className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-900">
                       ₹{Math.round(expense.amount).toLocaleString("en-IN")}
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-row gap-2 w-full sm:w-auto">
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() => handleEdit(expense)}
-                        className="border-blue-300 text-blue-600 hover:bg-blue-50 text-xs sm:text-sm"
+                        className="flex-1 sm:flex-none border-blue-500 text-blue-600 hover:bg-blue-50 hover:text-blue-700 focus:ring-2 focus:ring-blue-400 transition-colors"
                       >
-                        <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                        <Edit className="h-4 w-4 mr-1" />
                         Edit
                       </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button
                             size="sm"
-                            variant="outline"
-                            className="border-red-300 text-red-600 hover:bg-red-50 text-xs h-8"
+                            className="flex-1 sm:flex-none bg-red-600 hover:bg-red-700 text-white"
                           >
                             <Trash2 className="h-3 w-3 sm:mr-1" />
-                            <span className="hidden sm:inline">Delete</span>
+                            <span className="sm:inline">Delete</span>
                           </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
@@ -1166,15 +1397,15 @@ export default function ExpenseManagementSystem() {
 
         {/* Employee List */}
         {employees.length > 0 && (
-          <Card className="p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-white to-slate-50 border-0 shadow-lg">
-            <h3 className="text-xl sm:text-2xl font-bold text-slate-900 mb-4 sm:mb-6">
+          <Card className="p-3 sm:p-4 md:p-6 lg:p-8 bg-gradient-to-br from-white to-slate-50 border-0 shadow-lg">
+            <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-slate-900 mb-3 sm:mb-4 md:mb-6">
               Employee Salary Records
             </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
               {employees.map((employee) => (
                 <Card
                   key={employee.id}
-                  className="p-4 sm:p-5 bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 shadow-sm hover:shadow-md transition-shadow duration-200"
+                  className="p-3 sm:p-4 md:p-5 bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 shadow-sm hover:shadow-md transition-shadow duration-200"
                 >
                   {/* Header with name and edit button */}
                   <div className="flex justify-between items-start mb-3">
@@ -1212,16 +1443,12 @@ export default function ExpenseManagementSystem() {
                   <div className="space-y-2 pt-3 border-t border-indigo-100">
                     <div className="text-xs sm:text-sm text-slate-500">
                       <span className="font-medium">Added:</span>{" "}
-                      {new Date(employee.dateAdded).toLocaleDateString("en-IN")}
+                      {formatDate(employee.dateAdded)}
                     </div>
                     {employee.updatedAt && employee.updatedAt !== employee.createdAt && (
                       <div className="text-xs sm:text-sm font-bold text-green-600">
                         <span className="font-medium">Updated:</span>{" "}
-                        {new Date(employee.updatedAt).toLocaleDateString("en-IN")} at{" "}
-                        {new Date(employee.updatedAt).toLocaleTimeString("en-IN", {
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
+                        {formatDateTime(employee.updatedAt)}
                       </div>
                     )}
                   </div>
@@ -1232,12 +1459,12 @@ export default function ExpenseManagementSystem() {
         )}
 
         {/* Summary Footer */}
-        <Card className="p-4 sm:p-6 bg-gradient-to-r from-slate-800 to-slate-900 border-0 shadow-xl">
+        <Card className="p-3 sm:p-4 md:p-6 bg-gradient-to-r from-slate-800 to-slate-900 border-0 shadow-xl">
           <div className="text-center text-white">
-            <h3 className="text-lg sm:text-xl font-semibold mb-2">
+            <h3 className="text-base sm:text-lg md:text-xl font-semibold mb-2">
               Expense Summary
             </h3>
-            <p className="text-slate-300 text-sm sm:text-base">
+            <p className="text-slate-300 text-xs sm:text-sm md:text-base">
               Total of{" "}
               <span className="font-bold text-white">
                 {filteredEntries}
@@ -1270,6 +1497,16 @@ export default function ExpenseManagementSystem() {
           </div>
         </Card>
       </div>
+
+      {/* Bill Preview Modal */}
+      {showBillPreview && (
+        <BillPreview
+          url={showBillPreview.url}
+          filename={showBillPreview.filename}
+          type={showBillPreview.type}
+          onClose={() => setShowBillPreview(null)}
+        />
+      )}
     </div>
   );
 }
