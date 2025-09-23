@@ -670,7 +670,7 @@ export default function ExpenseManagementSystem() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-2 sm:p-4 md:p-6">
       <div className="max-w-7xl mx-auto space-y-3 sm:space-y-4 md:space-y-6">
         {/* Header */}
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="text-center md:text-left">
             <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent leading-tight">
               Expense Management System
@@ -679,10 +679,10 @@ export default function ExpenseManagementSystem() {
               Comprehensive expense tracking and management
             </p>
           </div>
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
+          <div className="flex flex-row gap-2 sm:gap-3 w-full md:w-auto">
             <Button
               onClick={() => setShowSalaryForm(!showSalaryForm)}
-              className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-sm sm:text-base flex-1 sm:flex-none"
+              className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-sm sm:text-base flex-1 md:flex-none"
               size="sm"
             >
               <Plus className="h-4 w-4" />
@@ -691,7 +691,7 @@ export default function ExpenseManagementSystem() {
             </Button>
             <Button
               onClick={() => setShowExpenseForm(!showExpenseForm)}
-              className="bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-sm sm:text-base flex-1 sm:flex-none"
+              className="bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-sm sm:text-base flex-1 md:flex-none"
               size="sm"
             >
               <Plus className="h-4 w-4" />
